@@ -6,7 +6,6 @@ JWT-based authentication and session management service for the Peerit platform.
 
 ### 1. Basic Tests - Local, No Infrastructure
 **Command**: `npm run test:basic`
-- **Duration**: ~0.3 seconds (10 tests)
 - **Infrastructure**: None (mocks only)
 - **Tests**: Unit tests, basic API validation, environment checks
 - **Environment**: `NODE_ENV=test`, `SKIP_REDIS=true`
@@ -14,7 +13,6 @@ JWT-based authentication and session management service for the Peerit platform.
 
 ### 2. Integration Tests - Docker Compose Infrastructure  
 **Command**: `npm run test:integration`
-- **Duration**: ~1.7 seconds (5 tests)
 - **Infrastructure**: Docker Compose (PostgreSQL + Redis)
 - **Tests**: Real database connections, session storage, full API flow
 - **Environment**: `NODE_ENV=test`, `TEST_INTEGRATION=true`
@@ -33,11 +31,13 @@ docker build -f Dockerfile.multi-stage -t peerit-auth-service:tested .
 **Option B**: Separate test compose automatically runs tests
 ```bash
 # Run integration tests in isolated Docker environment
-docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+docker compose -f compose.test.yml up --build --abort-on-container-exit
 
 # Clean up test containers
-docker compose -f docker-compose.test.yml down --volumes
+docker compose -f compose.test.yml down --volumes
 ```
+
+**Test Results**: ✅ ALL TESTS WORKING
 
 **Credentials**: Test credentials should NOT be in production images
 
@@ -61,13 +61,13 @@ npm run dev
 
 ## Testing Commands
 
-| Command | Infrastructure | Duration | What it tests |
-|---------|---------------|----------|---------------|
-| `npm test` | None | ~0.3s | Alias for `test:basic` |
-| `npm run test:basic` | None (mocks) | ~0.3s | Unit tests, environment validation |
-| `npm run test:integration` | Docker Compose | ~1.7s | Real PostgreSQL + Redis |
-| `npm run test:watch` | None (mocks) | - | Watch mode for development |
-| `npm run test:all` | Both | ~2s | Basic + Integration sequentially |
+| Command | Infrastructure | What it tests |
+|---------|---------------|---------------|
+| `npm test` | None | Alias for `test:basic` |
+| `npm run test:basic` | None (mocks) | Unit tests, environment validation |
+| `npm run test:integration` | Docker Compose | Real PostgreSQL + Redis |
+| `npm run test:watch` | None (mocks) | Watch mode for development |
+| `npm run test:all` | Both | Basic + Integration sequentially |
 ## Test Credentials Security
 
 ### Development/Test Credentials
@@ -106,7 +106,7 @@ FROM node:18-alpine AS production
 ### Option B: Test Compose
 
 ```yaml
-# docker-compose.test.yml
+# compose.test.yml
 services:
   auth-service-test:
     build: .
@@ -154,10 +154,10 @@ Uses [express-actuator](https://www.npmjs.com/package/express-actuator) for indu
 
 For faster test execution, the service automatically:
 
-- Skips Redis connection attempts in test mode (saves 5+ seconds)
+- Skips Redis connection attempts in test mode
 - Uses shorter timeouts (1s instead of 5s) for faster failures  
 - Provides `SKIP_REDIS=true` environment variable for complete Redis bypass
-- Maintains backward compatibility with full Redis integration tests via `npm run test:redis`
+- Maintains backward compatibility with full Redis integration tests via `npm run test:integration`
 
 ## Environment Configuration
 
