@@ -1,0 +1,83 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "main": {
+          "listen": [":80", ":443"],
+          "routes": [
+            {
+              "match": [{"path": ["/api/auth/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.AUTH_SERVICE_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/api/users/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.USER_SERVICE_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/api/teams/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.TEAM_SERVICE_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/api/rubrics/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.RUBRIC_SERVICE_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/api/reviews/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.REVIEW_SERVICE_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/api/reports/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.REPORT_SERVICE_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/api/emails/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.EMAIL_SERVICE_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/api/orchestrator/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.ORCHESTRATOR_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/bff/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.BFF_URL}"}]
+              }]
+            },
+            {
+              "match": [{"path": ["/*"]}],
+              "handle": [{
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": "{env.FRONTEND_URL}"}]
+              }]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
