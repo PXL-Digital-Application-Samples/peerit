@@ -69,6 +69,11 @@ class DatabaseService {
   }
 
   async connectRedis() {
+    // Circuit breaker: don't retry if we recently failed
+    if (this.retryTimer) {
+      return;
+    }
+    
     try {
       if (this.redis && !this.redis.isOpen) {
         // Add timeout wrapper for test environment
@@ -78,12 +83,26 @@ class DatabaseService {
           );
           await Promise.race([this.redis.connect(), timeoutPromise]);
         } else {
-          await this.redis.connect();
+          // Add timeout for development to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Redis connection timeout')), 2000)
+          );
+          await Promise.race([this.redis.connect(), timeoutPromise]);
         }
+        this.redisConnected = true;
+        console.log('✅ Redis connected');
       }
     } catch (error) {
-      console.warn('⚠️ Redis connection failed:', error.message);
+      if (!this.redisConnectionWarningShown) {
+        console.warn('⚠️ Redis connection failed:', error.message);
+        this.redisConnectionWarningShown = true;
+      }
       this.redisConnected = false;
+      // Don't retry immediately - wait before next attempt
+      this.retryTimer = setTimeout(() => {
+        this.retryTimer = null;
+        this.redisConnectionWarningShown = false; // Reset warning flag
+      }, 10000); // Wait 10 seconds before allowing retry
     }
   }
 
