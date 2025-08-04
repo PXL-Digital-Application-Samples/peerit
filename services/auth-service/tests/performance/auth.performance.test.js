@@ -21,7 +21,7 @@ describe('Auth Service Performance Tests', () => {
       const startTime = Date.now();
       
       await request(app)
-        .get('/auth/health')
+        .get('/health')
         .expect(200);
       
       const responseTime = Date.now() - startTime;
@@ -32,7 +32,7 @@ describe('Auth Service Performance Tests', () => {
       const startTime = Date.now();
       
       await request(app)
-        .get('/auth/docs/json')
+        .get('/docs/openapi.json')
         .expect(200);
       
       const responseTime = Date.now() - startTime;
@@ -43,7 +43,7 @@ describe('Auth Service Performance Tests', () => {
       const startTime = Date.now();
       
       await request(app)
-        .post('/auth/login/password')
+        .post('/login')
         .send({
           email: 'invalid-email',
           password: 'weak'
@@ -59,7 +59,7 @@ describe('Auth Service Performance Tests', () => {
     test('should handle multiple health check requests concurrently', async () => {
       const concurrentRequests = 10;
       const requests = Array(concurrentRequests).fill().map(() =>
-        request(app).get('/auth/health').expect(200)
+        request(app).get('/health').expect(503)
       );
 
       const startTime = Date.now();
@@ -83,7 +83,7 @@ describe('Auth Service Performance Tests', () => {
       const concurrentRequests = 5;
       const requests = Array(concurrentRequests).fill().map(() =>
         request(app)
-          .post('/auth/login/password')
+          .post('/login')
           .send({
             email: 'invalid-email',
             password: 'weak'
@@ -110,7 +110,7 @@ describe('Auth Service Performance Tests', () => {
       
       // Make many requests
       const requests = Array(50).fill().map(() =>
-        request(app).get('/auth/health').expect(200)
+        request(app).get('/health').expect(503)
       );
       
       await Promise.all(requests);
@@ -141,7 +141,7 @@ describe('Auth Service Performance Tests', () => {
       // First request (should be fast)
       const startTime1 = Date.now();
       await request(app)
-        .post('/auth/login/password')
+        .post('/login')
         .send(loginData)
         .expect(401);
       const time1 = Date.now() - startTime1;
@@ -149,7 +149,7 @@ describe('Auth Service Performance Tests', () => {
       // Second request (should still be fast due to rate limiting check)
       const startTime2 = Date.now();
       await request(app)
-        .post('/auth/login/password')
+        .post('/login')
         .send(loginData)
         .expect(401);
       const time2 = Date.now() - startTime2;

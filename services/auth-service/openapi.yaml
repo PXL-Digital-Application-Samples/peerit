@@ -38,20 +38,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [email, password]
-              properties:
-                email:
-                  type: string
-                  format: email
-                  example: user@example.com
-                  description: User's email address
-                password:
-                  type: string
-                  format: password
-                  minLength: 8
-                  example: securepassword123
-                  description: User's password
+              $ref: '#/components/schemas/LoginRequest'
             examples:
               valid_login:
                 summary: Valid login request
@@ -395,33 +382,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: UP
-                    enum: [UP, DOWN]
-                  timestamp:
-                    type: string
-                    format: date-time
-                    example: "2025-01-01T12:00:00Z"
-                  version:
-                    type: string
-                    example: "1.0.0"
-                  uptime:
-                    type: number
-                    example: 3600.5
-                    description: Uptime in seconds
-                  database:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                        example: UP
-                        enum: [UP, DOWN, UNKNOWN]
-                      type:
-                        type: string
-                        example: "postgresql"
+                $ref: '#/components/schemas/HealthResponse'
         '400':
           description: Bad request - invalid health check parameters
           content:
@@ -702,6 +663,75 @@ components:
           format: uuid
           example: "123e4567-e89b-12d3-a456-426614174000"
           description: Request identifier for debugging
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+          description: User's email address
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: securepassword123
+          description: User's password
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+          example: UP
+          description: Overall service status
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-01T12:00:00Z"
+          description: Health check timestamp
+        version:
+          type: string
+          example: "1.0.0"
+          description: Service version
+        uptime:
+          type: number
+          example: 3600.5
+          description: Service uptime in seconds
+        database:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [UP, DOWN]
+            type:
+              type: string
+              example: postgresql
+            mode:
+              type: string
+              example: connected
+        session:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [UP, DOWN]
+            connected:
+              type: boolean
+            mode:
+              type: string
+              example: redis
+        dependencies:
+          type: object
+          description: Status of external dependencies
 
   securitySchemes:
     bearerAuth:

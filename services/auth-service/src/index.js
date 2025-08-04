@@ -220,16 +220,19 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-// Start server
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Auth Service running on port ${PORT}`);
-  console.log(`📚 API Documentation: http://localhost:${PORT}/docs`);
-  console.log(`🔍 Health Check: http://localhost:${PORT}/health`);
-  console.log(`📋 OpenAPI JSON: http://localhost:${PORT}/docs/openapi.json`);
-  console.log(`📋 OpenAPI YAML: http://localhost:${PORT}/docs/openapi.yaml`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// Start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Auth Service running on port ${PORT}`);
+    console.log(`📚 API Documentation: http://localhost:${PORT}/docs`);
+    console.log(`🔍 Health Check: http://localhost:${PORT}/health`);
+    console.log(`📋 OpenAPI JSON: http://localhost:${PORT}/docs/openapi.json`);
+    console.log(`📋 OpenAPI YAML: http://localhost:${PORT}/docs/openapi.yaml`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 
-// Export both app and server for testing
-app.server = server;
+  // Export both app and server for testing
+  app.server = server;
+}
+
 module.exports = app;

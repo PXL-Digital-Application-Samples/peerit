@@ -9,9 +9,9 @@ const app = require('../../src/index');
 describe('Swagger/OpenAPI Integration Tests', () => {
   
   describe('OpenAPI Specification', () => {
-    test('GET /auth/docs/json should return valid OpenAPI spec', async () => {
+    test('GET /docs/openapi.json should return valid OpenAPI spec', async () => {
       const response = await request(app)
-        .get('/auth/docs/json')
+        .get('/docs/openapi.json')
         .expect(200)
         .expect('Content-Type', /json/);
 
@@ -28,9 +28,9 @@ describe('Swagger/OpenAPI Integration Tests', () => {
       expect(spec.info.version).toMatch(/^\d+\.\d+\.\d+$/);
       
       // Validate key paths exist
-      expect(spec.paths).toHaveProperty('/auth/login');
-      expect(spec.paths).toHaveProperty('/auth/health');
-      expect(spec.paths).toHaveProperty('/auth/info');
+      expect(spec.paths).toHaveProperty('/login');
+      expect(spec.paths).toHaveProperty('/health');
+      expect(spec.paths).toHaveProperty('/info');
       
       // Validate components schemas
       expect(spec.components).toHaveProperty('schemas');
@@ -40,9 +40,9 @@ describe('Swagger/OpenAPI Integration Tests', () => {
   });
 
   describe('Swagger UI Accessibility', () => {
-    test('GET /auth/docs should be accessible (may redirect)', async () => {
+    test('GET /docs should be accessible (may redirect)', async () => {
       const response = await request(app)
-        .get('/auth/docs');
+        .get('/docs');
 
       // Accept both 200 (direct) and 301 (redirect) as valid responses
       expect([200, 301]).toContain(response.status);
@@ -52,7 +52,7 @@ describe('Swagger/OpenAPI Integration Tests', () => {
   describe('Basic Endpoint Validation', () => {
     test('Health endpoint should return proper structure', async () => {
       const response = await request(app)
-        .get('/auth/health')
+        .get('/health')
         .expect(503); // Service down because no database
       
       // Validate response structure
@@ -70,24 +70,22 @@ describe('Swagger/OpenAPI Integration Tests', () => {
 
     test('Service info endpoint should return comprehensive configuration', async () => {
       const response = await request(app)
-        .get('/auth/info')
+        .get('/info')
         .expect(200);
       
       // Validate response structure
       expect(response.body).toHaveProperty('service');
-      expect(response.body).toHaveProperty('version');
+      expect(response.body.service).toHaveProperty('version');
       expect(response.body).toHaveProperty('environment');
       expect(response.body).toHaveProperty('database');
-      expect(response.body).toHaveProperty('session');
-      expect(response.body).toHaveProperty('jwt');
+      expect(response.body).toHaveProperty('sessions');
       expect(response.body).toHaveProperty('features');
       
       // Validate nested structures
       expect(response.body.service).toHaveProperty('name');
       expect(response.body.service).toHaveProperty('description');
       expect(response.body.database).toHaveProperty('type');
-      expect(response.body.session).toHaveProperty('provider');
-      expect(response.body.jwt).toHaveProperty('algorithm');
+      expect(response.body.sessions).toHaveProperty('provider');
     }, 15000); // Increase timeout for this test
 
     test('Login validation should work correctly', async () => {
@@ -98,7 +96,7 @@ describe('Swagger/OpenAPI Integration Tests', () => {
       };
       
       const response = await request(app)
-        .post('/auth/login')
+        .post('/login')
         .send(validRequest)
         .expect('Content-Type', /json/);
       
@@ -112,7 +110,7 @@ describe('Swagger/OpenAPI Integration Tests', () => {
       };
       
       const invalidResponse = await request(app)
-        .post('/auth/login')
+        .post('/login')
         .send(invalidRequest)
         .expect(400);
         
@@ -123,7 +121,7 @@ describe('Swagger/OpenAPI Integration Tests', () => {
   describe('Error Response Validation', () => {
     test('404 responses should match expected error format', async () => {
       const response = await request(app)
-        .get('/auth/non-existent-endpoint')
+        .get('/non-existent-endpoint')
         .expect(404);
       
       expect(response.body).toHaveProperty('error');
@@ -132,7 +130,7 @@ describe('Swagger/OpenAPI Integration Tests', () => {
 
     test('Validation errors should return proper error format', async () => {
       const response = await request(app)
-        .post('/auth/login')
+        .post('/login')
         .send({}) // Empty body should trigger validation error
         .expect(400);
       

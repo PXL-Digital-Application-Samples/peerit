@@ -147,7 +147,7 @@ describe('OpenAPI Specification Validation', () => {
   describe('Swagger UI Endpoint', () => {
     it('should serve Swagger UI documentation', async () => {
       const response = await request(app)
-        .get('/auth/docs')
+        .get('/docs')
         .redirects(1); // Follow redirects
 
       expect(response.status).toBe(200);
@@ -157,7 +157,7 @@ describe('OpenAPI Specification Validation', () => {
 
     it('should serve OpenAPI JSON specification', async () => {
       const response = await request(app)
-        .get('/auth/docs/json')
+        .get('/docs/openapi.json')
         .expect(200)
         .expect('Content-Type', /json/);
 
@@ -169,7 +169,7 @@ describe('OpenAPI Specification Validation', () => {
 
     it('should serve OpenAPI YAML specification', async () => {
       const response = await request(app)
-        .get('/auth/docs/yaml')
+        .get('/docs/openapi.yaml')
         .expect(200);
 
       expect(response.headers['content-type']).toMatch(/yaml|text/);
@@ -194,10 +194,10 @@ describe('OpenAPI Specification Validation', () => {
 
     it('should define all service endpoints', () => {
       const requiredPaths = [
-        '/auth/health',
-        '/auth/info',
-        '/auth/validate',
-        '/auth/docs'
+        '/health',
+        '/info',
+        '/validate',
+        '/docs'
       ];
 
       requiredPaths.forEach(path => {
