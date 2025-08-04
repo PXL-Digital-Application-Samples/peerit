@@ -31,6 +31,11 @@ class DatabaseService {
         this.redisConnected = false;
         return;
       }
+
+      // For integration tests, check if Redis is actually available first
+      if (process.env.NODE_ENV === 'test' && process.env.TEST_INTEGRATION) {
+        console.log('🔍 Testing Redis availability for integration tests...');
+      }
       
       // Use shorter timeouts in test environment
       const isTest = process.env.NODE_ENV === 'test';
@@ -53,12 +58,13 @@ class DatabaseService {
       });
 
       this.redis.on('connect', () => {
-        console.log('✅ Redis connected');
         this.redisConnected = true;
       });
 
-      // Try to connect but don't block startup
-      if (this.isDevelopment) {
+      // Connect immediately in test mode, delayed in development
+      if (process.env.NODE_ENV === 'test') {
+        await this.connectRedis();
+      } else if (this.isDevelopment) {
         setTimeout(() => this.connectRedis(), 1000);
       } else {
         await this.connectRedis();
@@ -76,18 +82,14 @@ class DatabaseService {
     
     try {
       if (this.redis && !this.redis.isOpen) {
-        // Add timeout wrapper for test environment
+        // In test mode, use shorter timeout and don't hang
         if (process.env.NODE_ENV === 'test') {
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Redis connection timeout in test')), 1000)
+            setTimeout(() => reject(new Error('Redis connection timeout in test')), 500)
           );
           await Promise.race([this.redis.connect(), timeoutPromise]);
         } else {
-          // Add timeout for development to prevent hanging
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Redis connection timeout')), 2000)
-          );
-          await Promise.race([this.redis.connect(), timeoutPromise]);
+          await this.redis.connect();
         }
         this.redisConnected = true;
         console.log('✅ Redis connected');
@@ -98,6 +100,11 @@ class DatabaseService {
         this.redisConnectionWarningShown = true;
       }
       this.redisConnected = false;
+      
+      // In test mode, don't retry - just fail fast
+      if (process.env.NODE_ENV === 'test') {
+        return;
+      }
       // Don't retry immediately - wait before next attempt
       this.retryTimer = setTimeout(() => {
         this.retryTimer = null;
