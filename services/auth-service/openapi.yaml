@@ -1,6 +1,6 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
-  title: Peerit Authentication Service
+  title: Peerit Auth Service API
   description: Secure authentication and session management for the Peerit platform
   version: 1.0.0
   contact:
@@ -13,7 +13,7 @@ info:
 servers:
   - url: http://localhost:3020
     description: Development server
-  - url: https://auth.peerit.example.com
+  - url: https://api.peerit.dev/auth
     description: Production server
 
 tags:
@@ -29,6 +29,7 @@ tags:
 paths:
   /auth/login:
     post:
+      operationId: loginUser
       summary: Authenticate user with email/password
       description: Validates user credentials and returns JWT tokens
       tags: [Authentication]
@@ -105,6 +106,7 @@ paths:
 
   /auth/magic-link:
     post:
+      operationId: requestMagicLink
       summary: Request magic link authentication
       description: Sends a magic link to the user's email for passwordless authentication
       tags: [Authentication]
@@ -174,6 +176,7 @@ paths:
 
   /auth/magic/{token}:
     get:
+      operationId: validateMagicLink
       summary: Validate magic link token
       description: Validates a magic link token and authenticates the user
       tags: [Authentication]
@@ -208,6 +211,7 @@ paths:
 
   /auth/refresh:
     post:
+      operationId: refreshToken
       summary: Refresh access token
       description: Uses refresh token to get a new access token
       tags: [Authentication]
@@ -249,6 +253,7 @@ paths:
 
   /auth/logout:
     post:
+      operationId: logoutUser
       summary: Logout user
       description: Invalidates the user's session and tokens
       tags: [Authentication]
@@ -274,6 +279,7 @@ paths:
 
   /auth/reset-password:
     post:
+      operationId: requestPasswordReset
       summary: Request password reset
       description: Sends password reset link to user's email
       tags: [Password Management]
@@ -315,6 +321,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
     put:
+      operationId: completePasswordReset
       summary: Complete password reset
       description: Resets password using token from email
       tags: [Password Management]
@@ -356,6 +363,7 @@ paths:
 
   /auth/validate:
     get:
+      operationId: validateToken
       summary: Validate JWT token (internal service use)
       description: Validates JWT token and returns user information for service-to-service communication
       tags: [Service Integration]
@@ -414,6 +422,12 @@ paths:
                       type:
                         type: string
                         example: "postgresql"
+        '400':
+          description: Bad request - invalid health check parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error during health check
           content:
@@ -528,6 +542,12 @@ paths:
                       commit:
                         type: string
                         example: "abc123def"
+        '400':
+          description: Bad request - invalid info parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Error retrieving service information
           content:
@@ -689,29 +709,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT token obtained from login or magic link authentication
-
-  responses:
-    UnauthorizedError:
-      description: Authentication information is missing or invalid
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error: "UNAUTHORIZED"
-            message: "Authentication required"
-            timestamp: "2025-01-01T12:00:00Z"
-
-    RateLimitError:
-      description: Too many requests
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error: "RATE_LIMITED"
-            message: "Too many requests, please try again later"
-            timestamp: "2025-01-01T12:00:00Z"
 
 security:
   - bearerAuth: []
