@@ -8,6 +8,7 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "test": "jest",
+    "test:basic": "jest tests/unit/database.basic.test.js tests/integration/auth.basic.test.js",
     "test:watch": "jest --watch",
     "test:integration": "jest --testMatch='**/tests/integration/**/*.test.js'",
     "lint": "eslint src/",
