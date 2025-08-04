@@ -28,6 +28,24 @@ This is a language-agnostic monorepo containing independent, separately deployab
 - **services/report-service**: Report generation and storage
 - **services/email-service**: Email notifications and reminders
 
+## Microservice Architecture
+
+Each microservice is completely independent with its own:
+
+- **Database**: Isolated PostgreSQL database per service
+- **API**: RESTful interface with clear contracts
+- **Docker**: Individual containerization and deployment
+- **Documentation**: Detailed specs in each service's README.md
+
+**Key Services:**
+
+- **[auth-service](services/auth-service/README.md)**: JWT tokens, magic links, password management
+- **user-service**: User profiles, roles, team membership
+- **review-service**: Anonymous peer evaluation submissions
+- **orchestrator**: Cross-service workflow coordination
+
+For detailed specifications, see individual service README files.
+
 ### Infrastructure
 
 - **infra/docker**: Docker configurations
@@ -147,16 +165,3 @@ See `infra/docker/` directory for Docker configurations.
 - **[Development Guide](docs/DEVELOPMENT.md)** - Complete development workflow, Docker usage, and service architecture
 
 > Services include .env.example files for local configuration and Docker compose files for isolated development.
-
-## Service Architecture
-
-Each service is completely independent with:
-
-- Own database and data isolation
-- Independent deployment pipeline
-- Language-agnostic interfaces
-- Docker containerization
-- Health checks and monitoring
-- Comprehensive logging
-
-This enables teams to work independently and migrate services to optimal languages while maintaining system consistency.
