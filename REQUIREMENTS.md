@@ -272,5 +272,4 @@ flowchart TB
 - Multi-phase reviews (e.g., midterm + final)
 - Reviewer quality scoring
 - Conflict detection & team dynamics insights
-- LMS integrations (e.g., Canvas)
-- Event bus (Kafka) or workflow engines (Temporal.io / Step Functions)
+- Event bus (Kafka)
