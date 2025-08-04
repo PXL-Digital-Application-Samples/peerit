@@ -102,6 +102,82 @@ if (process.env.SWAGGER_ENABLED !== 'false') {
   });
 }
 
+// Backward compatibility endpoints for OpenAPI spec
+app.get('/auth/health', async (req, res) => {
+  try {
+    const dbHealth = await databaseService.healthCheck();
+    const sessionHealth = await databaseService.getSessionHealth();
+    
+    const allHealthy = dbHealth.status === 'UP' && sessionHealth.status === 'UP';
+    const status = allHealthy ? 'UP' : 'DOWN';
+    const httpStatus = allHealthy ? 200 : 503;
+    
+    res.status(httpStatus).json({
+      status,
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.0.0',
+      uptime: process.uptime(),
+      dependencies: {
+        database: dbHealth,
+        session: sessionHealth
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'DOWN',
+      error: 'Health check failed',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/auth/info', async (req, res) => {
+  try {
+    const dbHealth = await databaseService.healthCheck();
+    const sessionHealth = await databaseService.getSessionHealth();
+    
+    res.json({
+      service: {
+        name: 'auth-service',
+        version: process.env.npm_package_version || '1.0.0',
+        description: 'Authentication and authorization service for Peerit platform'
+      },
+      environment: {
+        nodeVersion: process.version,
+        environment: process.env.NODE_ENV || 'development',
+        port: PORT
+      },
+      database: {
+        provider: 'prisma',
+        type: dbHealth.type || 'postgresql',
+        connected: dbHealth.status === 'UP',
+        mode: dbHealth.mode || 'connected'
+      },
+      session: {
+        provider: sessionHealth.provider || 'redis',
+        connected: sessionHealth.status === 'UP',
+        mode: sessionHealth.mode || 'redis'
+      },
+      features: {
+        magicLinks: true,
+        jwtRefresh: true,
+        rateLimiting: true
+      },
+      build: {
+        timestamp: new Date().toISOString(),
+        commit: process.env.BUILD_COMMIT || 'unknown'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error retrieving service information',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Routes
 app.use('/auth', authRoutes);
 
@@ -146,7 +222,7 @@ process.on('SIGINT', async () => {
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Auth Service running on port ${PORT}`);
   console.log(`📚 API Documentation: http://localhost:${PORT}/auth/docs`);
   console.log(`🔍 Health Check: http://localhost:${PORT}/auth/health`);
@@ -155,4 +231,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
+// Export both app and server for testing
+app.server = server;
 module.exports = app;

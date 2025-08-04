@@ -25,11 +25,25 @@ class DatabaseService {
 
     // Initialize Redis
     try {
+      // Skip Redis entirely in test mode if SKIP_REDIS is set
+      if (process.env.NODE_ENV === 'test' && process.env.SKIP_REDIS === 'true') {
+        console.log('⏭️ Skipping Redis initialization in test mode');
+        this.redisConnected = false;
+        return;
+      }
+      
+      // Use shorter timeouts in test environment
+      const isTest = process.env.NODE_ENV === 'test';
+      const connectTimeout = isTest ? 1000 : 5000;
+      const commandTimeout = isTest ? 500 : 3000;
+      
       this.redis = Redis.createClient({
         url: process.env.REDIS_URL || 'redis://localhost:6379/0',
         socket: {
-          connectTimeout: 5000,
-          lazyConnect: true
+          connectTimeout,
+          commandTimeout,
+          lazyConnect: true,
+          reconnectStrategy: isTest ? false : (retries) => Math.min(retries * 50, 500)
         }
       });
 
@@ -57,7 +71,15 @@ class DatabaseService {
   async connectRedis() {
     try {
       if (this.redis && !this.redis.isOpen) {
-        await this.redis.connect();
+        // Add timeout wrapper for test environment
+        if (process.env.NODE_ENV === 'test') {
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Redis connection timeout in test')), 1000)
+          );
+          await Promise.race([this.redis.connect(), timeoutPromise]);
+        } else {
+          await this.redis.connect();
+        }
       }
     } catch (error) {
       console.warn('⚠️ Redis connection failed:', error.message);

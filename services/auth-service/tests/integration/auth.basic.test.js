@@ -1,4 +1,9 @@
 const request = require('supertest');
+
+// Set test port before requiring the app
+process.env.PORT = 0; // Use dynamic port for testing
+process.env.NODE_ENV = 'test';
+
 const app = require('../../src/index');
 
 // Mock the database service for integration tests
@@ -6,6 +11,22 @@ jest.mock('../../src/services/database');
 const databaseService = require('../../src/services/database');
 
 describe('Auth Service - Basic Integration Tests', () => {
+  let server;
+
+  beforeAll(() => {
+    // Get the server instance if available
+    server = app.server;
+  });
+
+  afterAll(async () => {
+    // Close the server after all tests
+    if (server) {
+      await new Promise((resolve) => {
+        server.close(resolve);
+      });
+    }
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     
