@@ -40,7 +40,18 @@ PUT  /auth/reset-password     # Complete password reset
 ```http
 GET  /auth/validate           # Validate JWT token (internal)
 GET  /auth/health             # Health check
+GET  /auth/docs               # Swagger/OpenAPI documentation
 ```
+
+## API Documentation
+
+The service provides interactive API documentation via Swagger/OpenAPI:
+
+- **Development**: <http://localhost:3020/auth/docs>
+- **Swagger UI**: Interactive API explorer with request/response examples
+- **OpenAPI Spec**: Available at `/auth/docs/json` and `/auth/docs/yaml`
+
+> 📋 **Complete API specification**: See [`openapi.yaml`](./openapi.yaml) for the full API contract with detailed request/response schemas, examples, and validation rules.
 
 ## Data Models
 
@@ -149,6 +160,10 @@ MAGIC_LINK_BASE_URL=https://peerit.example.com
 # Server
 PORT=3020
 NODE_ENV=development
+
+# API Documentation
+SWAGGER_ENABLED=true
+SWAGGER_PATH=/auth/docs
 ```
 
 ## Development

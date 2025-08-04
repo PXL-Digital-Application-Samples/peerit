@@ -1,0 +1,605 @@
+openapi: 3.0.3
+info:
+  title: Peerit Authentication Service
+  description: Secure authentication and session management for the Peerit platform
+  version: 1.0.0
+  contact:
+    name: Peerit Team
+    url: https://github.com/PXL-Digital-Application-Samples/peerit
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3020
+    description: Development server
+  - url: https://auth.peerit.example.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Password Management
+    description: Password reset and management
+  - name: Service Integration
+    description: Internal service endpoints
+  - name: Monitoring
+    description: Health checks and metrics
+
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate user with email/password
+      description: Validates user credentials and returns JWT tokens
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                  description: User's email address
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: securepassword123
+                  description: User's password
+            examples:
+              valid_login:
+                summary: Valid login request
+                value:
+                  email: "student@example.com"
+                  password: "mySecurePassword123"
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                success:
+                  summary: Successful authentication
+                  value:
+                    access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    refresh_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    token_type: "Bearer"
+                    expires_in: 900
+                    user:
+                      id: "550e8400-e29b-41d4-a716-446655440000"
+                      email: "student@example.com"
+                      is_active: true
+                      created_at: "2025-01-01T00:00:00Z"
+                      last_login: "2025-01-01T12:00:00Z"
+        '400':
+          description: Invalid request format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '423':
+          description: Account locked due to too many failed attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/magic-link:
+    post:
+      summary: Request magic link authentication
+      description: Sends a magic link to the user's email for passwordless authentication
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                  description: User's email address
+                purpose:
+                  type: string
+                  enum: [login, review_session]
+                  default: login
+                  example: review_session
+                  description: Purpose of the magic link
+                session_id:
+                  type: string
+                  format: uuid
+                  example: 550e8400-e29b-41d4-a716-446655440000
+                  description: Optional session ID for review sessions
+            examples:
+              review_session:
+                summary: Magic link for review session
+                value:
+                  email: "reviewer@example.com"
+                  purpose: "review_session"
+                  session_id: "550e8400-e29b-41d4-a716-446655440000"
+              simple_login:
+                summary: Simple login magic link
+                value:
+                  email: "user@example.com"
+                  purpose: "login"
+      responses:
+        '200':
+          description: Magic link sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Magic link sent to your email"
+                  expires_in:
+                    type: integer
+                    example: 900
+                    description: Link expiry time in seconds
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/magic/{token}:
+    get:
+      summary: Validate magic link token
+      description: Validates a magic link token and authenticates the user
+      tags: [Authentication]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 32
+          example: abc123def456ghi789jkl012mno345pqr678
+          description: Magic link token from email
+      responses:
+        '200':
+          description: Token valid, user authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: Token already used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      description: Uses refresh token to get a new access token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+                  example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  description: Valid refresh token
+      responses:
+        '200':
+          description: New access token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type:
+                    type: string
+                    example: "Bearer"
+                  expires_in:
+                    type: integer
+                    example: 900
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      summary: Logout user
+      description: Invalidates the user's session and tokens
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Successfully logged out"
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/reset-password:
+    post:
+      summary: Request password reset
+      description: Sends password reset link to user's email
+      tags: [Password Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                  description: User's email address
+      responses:
+        '200':
+          description: Password reset email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password reset instructions sent to your email"
+        '400':
+          description: Invalid email format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many reset requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Complete password reset
+      description: Resets password using token from email
+      tags: [Password Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token:
+                  type: string
+                  example: "abc123def456ghi789"
+                  description: Password reset token from email
+                new_password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: "newSecurePassword123"
+                  description: New password (minimum 8 characters)
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Password reset successful"
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/validate:
+    get:
+      summary: Validate JWT token (internal service use)
+      description: Validates JWT token and returns user information for service-to-service communication
+      tags: [Service Integration]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenValidation'
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/health:
+    get:
+      summary: Health check endpoint
+      description: Returns service health status and basic information
+      tags: [Monitoring]
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                    enum: [healthy, unhealthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-01-01T12:00:00Z"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  uptime:
+                    type: number
+                    example: 3600
+                    description: Uptime in seconds
+                  dependencies:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: "connected"
+                      redis:
+                        type: string
+                        example: "connected"
+        '503':
+          description: Service unhealthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: unhealthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  errors:
+                    type: array
+                    items:
+                      type: string
+
+  /auth/docs:
+    get:
+      summary: API documentation
+      description: Swagger UI for interactive API documentation
+      tags: [Monitoring]
+      responses:
+        '200':
+          description: Swagger UI page
+          content:
+            text/html:
+              schema:
+                type: string
+
+components:
+  schemas:
+    AuthResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
+        - user
+      properties:
+        access_token:
+          type: string
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT access token
+        refresh_token:
+          type: string
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+          description: JWT refresh token
+        token_type:
+          type: string
+          example: "Bearer"
+          description: Token type for Authorization header
+        expires_in:
+          type: integer
+          example: 900
+          description: Access token expiry time in seconds
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - is_active
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+          description: Unique user identifier
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+          description: User's email address
+        is_active:
+          type: boolean
+          example: true
+          description: Whether the user account is active
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+          description: Account creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+          description: Last account update timestamp
+        last_login:
+          type: string
+          format: date-time
+          example: "2025-01-01T12:00:00Z"
+          description: Last successful login timestamp
+
+    TokenValidation:
+      type: object
+      required:
+        - valid
+        - user_id
+        - email
+        - expires_at
+      properties:
+        valid:
+          type: boolean
+          example: true
+          description: Whether the token is valid
+        user_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+          description: User ID from the token
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+          description: User email from the token
+        expires_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T13:00:00Z"
+          description: Token expiration time
+        session_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+          description: Session identifier
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "INVALID_CREDENTIALS"
+          description: Error code for programmatic handling
+        message:
+          type: string
+          example: "Invalid email or password"
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-01T12:00:00Z"
+          description: Error timestamp
+        request_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+          description: Request identifier for debugging
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login or magic link authentication
+
+  responses:
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "UNAUTHORIZED"
+            message: "Authentication required"
+            timestamp: "2025-01-01T12:00:00Z"
+
+    RateLimitError:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "RATE_LIMITED"
+            message: "Too many requests, please try again later"
+            timestamp: "2025-01-01T12:00:00Z"
+
+security:
+  - bearerAuth: []
