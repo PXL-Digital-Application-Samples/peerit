@@ -71,10 +71,15 @@ class DatabaseService {
       redis: 'unknown'
     };
 
-    // Check PostgreSQL
+    // Check PostgreSQL with timeout
     if (this.prisma) {
       try {
-        await this.prisma.$queryRaw`SELECT 1`;
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database timeout')), 3000)
+        );
+        const queryPromise = this.prisma.$queryRaw`SELECT 1`;
+        
+        await Promise.race([queryPromise, timeoutPromise]);
         health.database = 'connected';
         this.prismaConnected = true;
       } catch (error) {
@@ -88,10 +93,15 @@ class DatabaseService {
       health.database = 'not_initialized';
     }
 
-    // Check Redis
+    // Check Redis with timeout
     if (this.redis && this.redis.isOpen) {
       try {
-        await this.redis.ping();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Redis timeout')), 2000)
+        );
+        const pingPromise = this.redis.ping();
+        
+        await Promise.race([pingPromise, timeoutPromise]);
         health.redis = 'connected';
         this.redisConnected = true;
       } catch (error) {
@@ -394,207 +404,6 @@ class DatabaseService {
         ]
       }
     });
-  }
-}
-
-// Singleton instance
-const databaseService = new DatabaseService();
-
-module.exports = databaseService;
-
-  // User Credential operations
-  async createUser(email, passwordHash) {
-    return this.prisma.userCredential.create({
-      data: {
-        email,
-        passwordHash
-      }
-    });
-  }
-
-  async findUserByEmail(email) {
-    return this.prisma.userCredential.findUnique({
-      where: { email }
-    });
-  }
-
-  async findUserById(id) {
-    return this.prisma.userCredential.findUnique({
-      where: { id }
-    });
-  }
-
-  async updateUser(id, data) {
-    return this.prisma.userCredential.update({
-      where: { id },
-      data
-    });
-  }
-
-  async incrementFailedLoginAttempts(userId) {
-    return this.prisma.userCredential.update({
-      where: { id: userId },
-      data: {
-        failedLoginAttempts: {
-          increment: 1
-        }
-      }
-    });
-  }
-
-  async resetFailedLoginAttempts(userId) {
-    return this.prisma.userCredential.update({
-      where: { id: userId },
-      data: {
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-        lastLogin: new Date()
-      }
-    });
-  }
-
-  async lockAccount(userId, lockDurationMs) {
-    const lockedUntil = new Date(Date.now() + lockDurationMs);
-    return this.prisma.userCredential.update({
-      where: { id: userId },
-      data: { lockedUntil }
-    });
-  }
-
-  // Magic Link Token operations
-  async createMagicLinkToken(userId, token, expiresAt, purpose = 'login', sessionId = null) {
-    return this.prisma.magicLinkToken.create({
-      data: {
-        userId,
-        token,
-        expiresAt,
-        purpose,
-        sessionId
-      }
-    });
-  }
-
-  async findMagicLinkToken(token) {
-    return this.prisma.magicLinkToken.findUnique({
-      where: { token },
-      include: { user: true }
-    });
-  }
-
-  async useMagicLinkToken(id) {
-    return this.prisma.magicLinkToken.update({
-      where: { id },
-      data: {
-        used: true,
-        usedAt: new Date()
-      }
-    });
-  }
-
-  async cleanupExpiredMagicLinkTokens() {
-    return this.prisma.magicLinkToken.deleteMany({
-      where: {
-        expiresAt: {
-          lt: new Date()
-        }
-      }
-    });
-  }
-
-  // Refresh Token operations
-  async createRefreshToken(userId, token, expiresAt, userAgent = null, ipAddress = null) {
-    return this.prisma.refreshToken.create({
-      data: {
-        userId,
-        token,
-        expiresAt,
-        userAgent,
-        ipAddress
-      }
-    });
-  }
-
-  async findRefreshToken(token) {
-    return this.prisma.refreshToken.findUnique({
-      where: { token },
-      include: { user: true }
-    });
-  }
-
-  async updateRefreshTokenLastUsed(id) {
-    return this.prisma.refreshToken.update({
-      where: { id },
-      data: { lastUsed: new Date() }
-    });
-  }
-
-  async revokeRefreshToken(id) {
-    return this.prisma.refreshToken.update({
-      where: { id },
-      data: {
-        revoked: true,
-        revokedAt: new Date()
-      }
-    });
-  }
-
-  async revokeAllUserRefreshTokens(userId) {
-    return this.prisma.refreshToken.updateMany({
-      where: { userId },
-      data: {
-        revoked: true,
-        revokedAt: new Date()
-      }
-    });
-  }
-
-  async cleanupExpiredRefreshTokens() {
-    return this.prisma.refreshToken.deleteMany({
-      where: {
-        OR: [
-          { expiresAt: { lt: new Date() } },
-          { revoked: true }
-        ]
-      }
-    });
-  }
-
-  // Session operations (Redis)
-  async createSession(sessionId, userData, ttlSeconds = 8 * 60 * 60) {
-    const sessionKey = `session:${sessionId}`;
-    await this.redis.setEx(sessionKey, ttlSeconds, JSON.stringify(userData));
-    return sessionId;
-  }
-
-  async getSession(sessionId) {
-    const sessionKey = `session:${sessionId}`;
-    const sessionData = await this.redis.get(sessionKey);
-    return sessionData ? JSON.parse(sessionData) : null;
-  }
-
-  async updateSession(sessionId, userData, ttlSeconds = 8 * 60 * 60) {
-    const sessionKey = `session:${sessionId}`;
-    await this.redis.setEx(sessionKey, ttlSeconds, JSON.stringify(userData));
-  }
-
-  async deleteSession(sessionId) {
-    const sessionKey = `session:${sessionId}`;
-    await this.redis.del(sessionKey);
-  }
-
-  async deleteAllUserSessions(userId) {
-    const pattern = 'session:*';
-    const keys = await this.redis.keys(pattern);
-    
-    for (const key of keys) {
-      const sessionData = await this.redis.get(key);
-      if (sessionData) {
-        const session = JSON.parse(sessionData);
-        if (session.user_id === userId) {
-          await this.redis.del(key);
-        }
-      }
-    }
   }
 }
 
