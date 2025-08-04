@@ -8,7 +8,7 @@ JWT-based authentication and session management service for the Peerit platform.
 **Command**: `npm run test:basic`
 - **Infrastructure**: None (mocks only)
 - **Tests**: Unit tests, basic API validation, environment checks
-- **Environment**: `NODE_ENV=test`, `SKIP_REDIS=true`
+- **Environment**: `NODE_ENV=test`, `SKIP_REDIS=true`, includes JWT secrets
 - **Use case**: Fast feedback during development, CI pre-checks
 
 ### 2. Integration Tests - Docker Compose Infrastructure  
@@ -17,6 +17,7 @@ JWT-based authentication and session management service for the Peerit platform.
 - **Tests**: Real database connections, session storage, full API flow
 - **Environment**: `NODE_ENV=test`, `TEST_INTEGRATION=true`
 - **Use case**: Pre-production validation, full system testing
+- **Coverage**: All 14 auth endpoints including login, magic links, password reset, token operations, and monitoring endpoints
 
 ### 3. Docker Build Integration
 
@@ -38,6 +39,14 @@ docker compose -f compose.test.yml down --volumes
 ```
 
 **Test Results**: ✅ ALL TESTS WORKING
+
+**Integration test coverage includes:**
+- All authentication endpoints (login, magic links, token validation, logout)
+- Password management workflows (reset request/completion)
+- Express Actuator monitoring endpoints
+- Service health and dependency checking
+- Error handling and security validation
+- Database and Redis integration testing
 
 **Credentials**: Test credentials should NOT be in production images
 
@@ -121,12 +130,40 @@ services:
 
 ## Features
 
-- **JWT Authentication**: Access and refresh token management
-- **Magic Link Authentication**: Email-based passwordless login
-- **Password Management**: Secure password reset functionality
-- **Session Management**: Redis-based session storage with fallbacks
-- **Monitoring**: Industry-standard health and info endpoints
+### Core Authentication
+- **JWT Authentication**: Access and refresh token management with configurable expiration
+- **Magic Link Authentication**: Email-based passwordless login with secure token generation
+- **Password Management**: Secure password reset functionality with email workflows
+- **Token Validation**: Endpoint for validating JWT tokens and extracting user information
+- **Session Management**: Redis-based session storage with in-memory fallbacks
+
+### Security & Rate Limiting
+- **Rate Limiting**: Per-endpoint rate limiting (login, magic links, password reset)
+- **Token Refresh**: Secure refresh token rotation and validation
+- **Logout Support**: Token invalidation and session cleanup
+- **CORS Protection**: Configurable cross-origin resource sharing
+- **Security Headers**: Helmet.js integration for security best practices
+
+### Monitoring & Operations  
+- **Express Actuator**: Industry-standard monitoring endpoints (`/management/*`)
+  - `/management/health` - Service health status
+  - `/management/database` - Database and session health
+  - `/management/info` - Service information and configuration
+- **Health Endpoints**: Comprehensive health checking (`/health`, `/info`)
+- **API Documentation**: Live Swagger UI with OpenAPI 3.1 specification
 - **Development Ready**: Mock database and session modes for development
+
+### API Endpoints
+- `POST /login` - Email/password authentication
+- `POST /magic-link` - Generate magic link for passwordless login  
+- `GET /magic/{token}` - Consume magic link token
+- `POST /refresh` - Refresh JWT access tokens
+- `POST /logout` - Invalidate tokens and end session
+- `POST /reset-password` - Initiate password reset flow
+- `PUT /reset-password` - Complete password reset with new password
+- `GET /validate` - Validate JWT token and return user info
+- `GET /health` - Service health status
+- `GET /info` - Service configuration and build information
 
 ## API Documentation
 
@@ -150,14 +187,37 @@ services:
 ### Monitoring
 Uses [express-actuator](https://www.npmjs.com/package/express-actuator) for industry-standard monitoring endpoints following Spring Boot Actuator patterns.
 
-### Testing Performance
+### Integration Test Coverage
 
-For faster test execution, the service automatically:
+The integration tests comprehensively validate all core auth service functionality:
 
-- Skips Redis connection attempts in test mode
+**Authentication Flows:**
+- Email/password login with JWT token generation
+- Magic link generation and consumption workflows  
+- Token validation and authorization checking
+- Token refresh and logout operations
+
+**Password Management:**
+- Password reset request initiation
+- Password reset completion workflow
+- Secure error handling for invalid requests
+
+**Monitoring & Health:**
+- Express Actuator endpoints (`/management/health`, `/management/database`, `/management/info`)
+- Service health and dependency status checking
+- API documentation serving and OpenAPI specification
+
+**Error Handling:**
+- Database connection failure scenarios
+- Invalid token format validation
+- Rate limiting and security error responses
+- Graceful degradation when dependencies are unavailable
+
+**Performance Optimizations:**
+- Skips Redis connection attempts in basic test mode
 - Uses shorter timeouts (1s instead of 5s) for faster failures  
 - Provides `SKIP_REDIS=true` environment variable for complete Redis bypass
-- Maintains backward compatibility with full Redis integration tests via `npm run test:integration`
+- Clean separation between unit tests (mocks) and integration tests (real infrastructure)
 
 ## Environment Configuration
 

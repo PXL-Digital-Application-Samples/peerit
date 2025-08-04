@@ -7,7 +7,7 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "npm run test:basic",
-    "test:basic": "cross-env NODE_ENV=test SKIP_REDIS=true jest tests/simple.test.js --verbose",
+    "test:basic": "cross-env NODE_ENV=test SKIP_REDIS=true JWT_SECRET=test-secret JWT_REFRESH_SECRET=test-refresh-secret jest tests/simple.test.js --verbose",
     "test:integration": "cross-env NODE_ENV=test TEST_INTEGRATION=true jest tests/integration/infrastructure.test.js --testTimeout=10000 --forceExit --verbose",
     "test:watch": "cross-env NODE_ENV=test SKIP_REDIS=true jest tests/simple.test.js --watch",
     "test:all": "npm run test:basic && npm run test:integration",
