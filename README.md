@@ -9,7 +9,7 @@ This is a language-agnostic monorepo containing independent, separately deployab
 ## Services
 
 ### Frontend
-- **apps/frontend**: Reactive SPA (SvelteKit/Vue.js)
+- **apps/frontend**: Reactive SPA (Vue.js)
 
 ### API Layer
 - **apps/api-gateway**: Caddy configuration and routing

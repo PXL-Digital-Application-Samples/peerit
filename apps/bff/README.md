@@ -6,7 +6,7 @@ A specialized API layer that provides frontend-optimized endpoints by orchestrat
 
 - **Runtime**: Node.js
 - **Framework**: Express.js
-- **Language**: TypeScript
+- **Language**: JavaScript
 - **HTTP Client**: Axios
 - **Validation**: Joi
 - **Documentation**: OpenAPI/Swagger
@@ -48,9 +48,6 @@ npm install
 
 # Start development server
 npm run dev
-
-# Build for production
-npm run build
 
 # Start production server
 npm start

@@ -51,7 +51,7 @@ npm run build
 Services can be migrated to any language. See `docs/MIGRATION.md` for detailed guidance.
 
 ### Current Status
-- **Node.js/TypeScript**: All services (initial implementation)
+- **Node.js/JavaScript**: All services (initial implementation)
 - **Migration Ready**: Services are designed to be language-agnostic
 
 ### Migration Example
@@ -126,5 +126,4 @@ This monorepo structure provides:
 - **Language Flexibility**: Migrate services to optimal languages
 - **Deployment Independence**: Deploy services individually
 - **Shared Tooling**: Common development and deployment tools
-- **Type Safety**: Shared TypeScript interfaces (optional)
 - **Testing**: Integration testing across service boundaries

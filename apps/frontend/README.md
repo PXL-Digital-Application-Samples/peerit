@@ -1,14 +1,16 @@
 # Frontend Application
 
-Reactive SPA built with SvelteKit for the Peerit peer evaluation platform.
+Reactive SPA built with Vue.js for the Peerit peer evaluation platform.
 
 ## Technology Stack
 
-- **Framework**: SvelteKit
-- **Language**: TypeScript
+- **Framework**: Vue.js 3
+- **Language**: JavaScript
+- **Build Tool**: Vite
 - **Styling**: TailwindCSS
-- **State Management**: Svelte stores
-- **HTTP Client**: Fetch API
+- **State Management**: Pinia
+- **HTTP Client**: Axios
+- **Router**: Vue Router
 
 ## Features
 
@@ -31,6 +33,12 @@ npm run build
 
 # Preview production build
 npm run preview
+
+# Lint code
+npm run lint
+
+# Format code
+npm run format
 ```
 
 ## Environment Variables
@@ -46,8 +54,21 @@ VITE_BFF_BASE_URL=http://localhost:3001
 
 The frontend communicates with the backend through the BFF (Backend-for-Frontend) service, which provides a simplified API tailored for frontend needs.
 
+## Project Structure
+
+```
+src/
+├── components/          # Reusable Vue components
+├── views/              # Page components
+├── router/             # Vue Router configuration
+├── stores/             # Pinia stores for state management
+├── services/           # API service functions
+├── assets/             # Static assets
+└── main.js             # Application entry point
+```
+
 ## Deployment
 
-The application is containerized and can be deployed as a static site or SPA.
+The application is containerized and can be deployed as a static site.
 
 See `Dockerfile` for containerization details.

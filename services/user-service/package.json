@@ -1,5 +1,5 @@
 {
-  "name": "@peerit/team-service",
+  "name": "@peerit/user-service",
   "version": "1.0.0",
   "private": true,
   "scripts": {

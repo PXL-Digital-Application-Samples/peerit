@@ -52,4 +52,4 @@ CREATE TABLE email_logs (
 
 ## Technology Stack
 
-Language-agnostic service (currently Node.js/TypeScript).
+Language-agnostic service (currently Node.js/JavaScript).

@@ -6,7 +6,7 @@ Manages user profiles, roles, and user-related data for the Peerit platform.
 
 - **Runtime**: Node.js (Language-agnostic - can be migrated to Go, Rust, Python, etc.)
 - **Framework**: Express.js
-- **Language**: TypeScript
+- **Language**: JavaScript
 - **Database**: PostgreSQL
 - **ORM**: Prisma
 

@@ -6,7 +6,7 @@ Handles authentication, authorization, and session management for the Peerit pla
 
 - **Runtime**: Node.js (can be changed to Go, Rust, etc.)
 - **Framework**: Express.js
-- **Language**: TypeScript
+- **Language**: JavaScript
 - **Database**: PostgreSQL
 - **ORM**: Prisma
 - **Authentication**: JWT + bcrypt

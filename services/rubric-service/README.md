@@ -43,4 +43,4 @@ CREATE TABLE questions (
 
 ## Technology Stack
 
-Language-agnostic service (currently Node.js/TypeScript).
+Language-agnostic service (currently Node.js/JavaScript).

@@ -36,4 +36,4 @@ CREATE INDEX idx_reports_reviewee_id ON reports(reviewee_id);
 
 ## Technology Stack
 
-Language-agnostic service (currently Node.js/TypeScript).
+Language-agnostic service (currently Node.js/JavaScript).

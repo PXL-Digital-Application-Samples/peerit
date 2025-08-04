@@ -6,7 +6,7 @@ Coordinates multi-step workflows across microservices for complex business proce
 
 - **Runtime**: Node.js
 - **Framework**: Express.js
-- **Language**: TypeScript
+- **Language**: JavaScript
 - **Message Queue**: Redis/Bull
 - **HTTP Client**: Axios
 - **Documentation**: OpenAPI/Swagger
@@ -54,9 +54,6 @@ npm install
 
 # Start development server
 npm run dev
-
-# Build for production
-npm run build
 
 # Start production server
 npm start

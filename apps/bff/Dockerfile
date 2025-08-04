@@ -27,11 +27,11 @@ COPY --from=builder --chown=service:nodejs /app/package.json ./package.json
 USER service
 
 # Expose port
-EXPOSE 3020
+EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3020/health || exit 1
+  CMD curl -f http://localhost:3001/health || exit 1
 
 # Start the application
 CMD ["node", "src/index.js"]
