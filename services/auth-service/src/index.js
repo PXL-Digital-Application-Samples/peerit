@@ -4,12 +4,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
+const actuator = require('express-actuator');
 const YAML = require('yamljs');
 const path = require('path');
 
 // Import routes
 const authRoutes = require('./routes/auth');
-const serviceRoutes = require('./routes/service');
 const { generalRateLimit } = require('./middleware/rateLimit');
 
 const app = express();
@@ -46,19 +46,47 @@ app.set('trust proxy', 1);
 // Global rate limiting
 app.use(generalRateLimit);
 
+// Add express-actuator for industry-standard monitoring endpoints
+const databaseService = require('./services/database');
+
+app.use('/auth', actuator({
+  basePath: '/management',
+  customEndpoints: [
+    {
+      id: 'database',
+      controller: async (req, res) => {
+        try {
+          const dbHealth = await databaseService.healthCheck();
+          const sessionHealth = await databaseService.getSessionHealth();
+          
+          res.json({
+            database: dbHealth,
+            session: sessionHealth,
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          res.status(503).json({
+            error: 'Database health check failed',
+            message: error.message,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    }
+  ]
+}));
+
 // API Documentation
 if (process.env.SWAGGER_ENABLED !== 'false') {
-  app.use('/auth/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, {
+  app.use('/auth/docs', swaggerUi.serve);
+  app.get('/auth/docs', swaggerUi.setup(openApiSpec, {
     explorer: true,
     customSiteTitle: 'Peerit Auth Service API',
-    customfavIcon: '/assets/favicon.ico',
     swaggerOptions: {
       persistAuthorization: true,
       displayRequestDuration: true,
       docExpansion: 'none',
       filter: true,
-      showExtensions: true,
-      showCommonExtensions: true,
       tryItOutEnabled: true
     }
   }));
@@ -76,7 +104,6 @@ if (process.env.SWAGGER_ENABLED !== 'false') {
 
 // Routes
 app.use('/auth', authRoutes);
-app.use('/auth', serviceRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -99,7 +126,7 @@ app.use('*', (req, res) => {
 });
 
 // Error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('Error:', err);
   
   res.status(err.status || 500).json({

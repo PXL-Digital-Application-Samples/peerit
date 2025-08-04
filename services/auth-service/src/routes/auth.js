@@ -182,7 +182,7 @@ router.post('/reset-password',
   validate('resetPasswordRequest'),
   async (req, res) => {
     try {
-      const { email } = req.body;
+      const { email: _email } = req.body;
 
       // TODO: Implement password reset logic
       // For now, return not implemented
@@ -209,7 +209,7 @@ router.put('/reset-password',
   validate('resetPasswordComplete'),
   async (req, res) => {
     try {
-      const { token, new_password } = req.body;
+      const { token: _token, new_password: _newPassword } = req.body;
 
       // TODO: Implement password reset completion logic
       // For now, return not implemented

@@ -7,12 +7,24 @@ const jwt = require('jsonwebtoken');
 jest.mock('../../src/services/database');
 
 describe('Auth Service', () => {
+  const originalEnv = process.env;
+  
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.JWT_SECRET = 'test-secret-key';
-    process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
-    process.env.JWT_EXPIRES_IN = '15m';
-    process.env.JWT_REFRESH_EXPIRES_IN = '7d';
+    // Set test environment variables only for testing
+    process.env = {
+      ...originalEnv,
+      NODE_ENV: 'test',
+      JWT_SECRET: 'test-jwt-secret-key-for-testing-only',
+      JWT_REFRESH_SECRET: 'test-refresh-secret-for-testing-only',
+      JWT_EXPIRES_IN: '15m',
+      JWT_REFRESH_EXPIRES_IN: '7d'
+    };
+  });
+
+  afterAll(() => {
+    // Restore original environment
+    process.env = originalEnv;
   });
 
   describe('hashPassword', () => {

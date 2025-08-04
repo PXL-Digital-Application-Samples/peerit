@@ -39,7 +39,7 @@ Each microservice is completely independent with its own:
 
 **Key Services:**
 
-- **[auth-service](services/auth-service/README.md)**: JWT tokens, magic links, password management
+- **[auth-service](services/auth-service/README.md)**: JWT tokens, magic links, password management, express-actuator monitoring
 - **user-service**: User profiles, roles, team membership
 - **review-service**: Anonymous peer evaluation submissions
 - **orchestrator**: Cross-service workflow coordination
