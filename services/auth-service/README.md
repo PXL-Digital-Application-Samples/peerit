@@ -4,12 +4,14 @@ JWT-based authentication and session management service for the Peerit platform.
 
 ## Testing Strategy
 
-### 1. Basic Tests - Local, No Infrastructure
-**Command**: `npm run test:basic`
-- **Infrastructure**: None (mocks only)
-- **Tests**: Unit tests, basic API validation, environment checks
-- **Environment**: `NODE_ENV=test`, `SKIP_REDIS=true`, includes JWT secrets
-- **Use case**: Fast feedback during development, CI pre-checks
+### 1. Unit Tests - Fast, Local, No Infrastructure
+**Command**: `npm run test:unit` (or `npm test`)
+- **Infrastructure**: None (uses mocks and in-memory providers)
+- **Tests**: 43 comprehensive unit tests covering auth service business logic
+- **Coverage**: Password hashing, JWT tokens, magic link generation, user authentication
+- **Environment**: `NODE_ENV=test`, mocked database services
+- **Performance**: ~4 seconds execution time
+- **Use case**: Primary development testing, CI pre-checks, rapid feedback
 
 ### 2. Integration Tests - Docker Compose Infrastructure  
 **Command**: `npm run test:integration`
@@ -56,8 +58,8 @@ docker compose -f compose.test.yml down --volumes
 # Install dependencies
 npm install
 
-# 1. Basic tests (fast, no infrastructure)
-npm run test:basic
+# 1. Unit tests (fast, comprehensive business logic testing)
+npm test
 
 # 2. Integration tests (requires Docker Compose)
 docker compose -f infra/docker/compose.yml up -d
@@ -72,11 +74,13 @@ npm run dev
 
 | Command | Infrastructure | What it tests |
 |---------|---------------|---------------|
-| `npm test` | None | Alias for `test:basic` |
-| `npm run test:basic` | None (mocks) | Unit tests, environment validation |
+| `npm test` | None | Unit tests (auth service business logic) |
+| `npm run test:unit` | None (mocks) | Same as `npm test` |
+| `npm run test:basic` | None (mocks) | Alias for unit tests |
 | `npm run test:integration` | Docker Compose | Real PostgreSQL + Redis |
 | `npm run test:watch` | None (mocks) | Watch mode for development |
-| `npm run test:all` | Both | Basic + Integration sequentially |
+| `npm run test:all` | Both | Unit + Integration sequentially |
+
 ## Test Credentials Security
 
 ### Development/Test Credentials
@@ -104,7 +108,7 @@ FROM node:18-alpine AS test
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run test:basic
+RUN npm run test:unit
 # Only proceed to production if tests pass
 
 # Production stage  

@@ -117,14 +117,15 @@ describe('Auth Service', () => {
       }).toThrow();
     });
 
-    test('should throw error for refresh token used as access token', () => {
+    test('should reject refresh token in verifyAccessToken (wrong secret)', () => {
       const userId = 'test-user-id';
       const email = 'test@example.com';
       const tokens = authService.generateTokens(userId, email);
       
+      // Refresh token uses different secret, so verifyAccessToken should reject it
       expect(() => {
         authService.verifyAccessToken(tokens.refreshToken);
-      }).toThrow();
+      }).toThrow('Invalid or expired token');
     });
   });
 
@@ -140,14 +141,15 @@ describe('Auth Service', () => {
       expect(payload.type).toBe('refresh');
     });
 
-    test('should throw error for access token used as refresh token', () => {
+    test('should reject access token in verifyRefreshToken (wrong secret)', () => {
       const userId = 'test-user-id';
       const email = 'test@example.com';
       const tokens = authService.generateTokens(userId, email);
       
+      // Access token uses different secret, so verifyRefreshToken should reject it
       expect(() => {
         authService.verifyRefreshToken(tokens.accessToken);
-      }).toThrow();
+      }).toThrow('Invalid or expired refresh token');
     });
   });
 
