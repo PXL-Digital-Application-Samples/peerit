@@ -87,7 +87,7 @@ docker compose up
 docker compose up -d
 
 # Start only infrastructure (PostgreSQL + Redis)
-docker compose up postgres redis
+docker compose -f infra/docker/compose.yml up -d
 
 # Start specific services
 docker compose up frontend bff api-gateway
@@ -101,6 +101,49 @@ docker compose down
 # Clean slate (removes all data)
 docker compose down -v
 ```
+
+### Testing
+
+#### Infrastructure Testing
+
+Test individual services against real Docker Compose infrastructure:
+
+```bash
+# 1. Start infrastructure
+docker compose -f infra/docker/compose.yml up -d
+
+# 2. Test specific services
+cd services/auth-service
+npm install
+npm run test:compose  # Tests against real PostgreSQL + Redis
+
+cd ../user-service  
+npm install
+npm test:integration  # Service-specific integration tests
+
+# 3. Clean up
+docker compose -f infra/docker/compose.yml down
+```
+
+#### Development Testing
+
+Fast tests for development (no infrastructure required):
+
+```bash
+cd services/auth-service
+npm run test:basic  # ~2s - uses mocks
+
+cd services/user-service
+npm test  # Unit tests with mocks
+```
+
+**Test Types by Service:**
+
+| Service | Fast Tests | Integration Tests | Infrastructure |
+|---------|------------|------------------|----------------|
+| auth-service | `npm run test:basic` | `npm run test:compose` | PostgreSQL + Redis |
+| user-service | `npm test` | `npm run test:integration` | PostgreSQL |
+| All | `npm run test:docker` | `npm run test:integration` | Full stack |
 
 ### Individual Service Development
 

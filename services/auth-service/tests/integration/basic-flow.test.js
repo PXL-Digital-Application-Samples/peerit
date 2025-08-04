@@ -1,4 +1,12 @@
-const request = require('supertest');
+const   beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.TEST_INTEGRATION = 'true';
+    process.env.DATABASE_URL = 'postgresql://postgres:password@localhost:5432/peerit_test';
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    process.env.JWT_SECRET = 'test_jwt_secret';
+    
+    app = require('../../src/index');
+  }, 5000);supertest');
 
 // Ultra-simple integration test 
 describe('Auth Service - Basic Infrastructure Test', () => {
@@ -16,9 +24,13 @@ describe('Auth Service - Basic Infrastructure Test', () => {
 
   afterAll(async () => {
     // Clean up database connections
-    const databaseService = require('../../src/services/database');
-    await databaseService.disconnect();
-  }, 5000);
+    try {
+      const databaseService = require('../../src/services/database');
+      await databaseService.disconnect();
+    } catch (error) {
+      // Ignore cleanup errors in tests
+    }
+  }, 2000);
 
   test('should get service root endpoint', async () => {
     const response = await request(app)

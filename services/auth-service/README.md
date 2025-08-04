@@ -2,14 +2,29 @@
 
 JWT-based authentication and session management service for the Peerit platform.
 
-## Features
+## Testing Strategy
 
-- **JWT Authentication**: Access and refresh token management
-- **Magic Link Authentication**: Email-based passwordless login
-- **Password Management**: Secure password reset functionality
-- **Session Management**: Redis-based session storage with fallbacks
-- **Monitoring**: Industry-standard health and info endpoints via express-actuator
-- **Development Ready**: Mock database and session modes for development
+### 1. Basic Tests - Local, No Infrastructure
+**Command**: `npm run test:basic`
+- **Duration**: ~2 seconds
+- **Infrastructure**: None (mocks only)
+- **Tests**: Unit tests, basic API validation, OpenAPI compliance
+- **Environment**: `NODE_ENV=test`, `SKIP_REDIS=true`
+- **Use case**: Fast feedback during development, CI pre-checks
+
+### 2. Integration Tests - Docker Compose Infrastructure  
+**Command**: `npm run test:integration`
+- **Duration**: ~5 seconds
+- **Infrastructure**: Docker Compose (PostgreSQL + Redis)
+- **Tests**: Real database connections, session storage, full API flow
+- **Environment**: `NODE_ENV=test`, `TEST_INTEGRATION=true`
+- **Use case**: Pre-production validation, full system testing
+
+### 3. Docker Build Integration
+**Options**:
+- **Option A**: Multi-stage Dockerfile runs tests during build
+- **Option B**: Separate test compose automatically runs tests
+- **Credentials**: Test credentials should NOT be in production images
 
 ## Quick Start
 
@@ -17,15 +32,86 @@ JWT-based authentication and session management service for the Peerit platform.
 # Install dependencies
 npm install
 
-# Run in development mode (uses mocks when database unavailable)
-npm run dev
-
-# Run tests (fast - skips Redis for speed)
+# 1. Basic tests (fast, no infrastructure)
 npm run test:basic
 
-# Run tests with Redis (slower but more comprehensive)
-npm run test:redis
+# 2. Integration tests (requires Docker Compose)
+docker compose -f infra/docker/compose.yml up -d
+npm run test:integration
+docker compose -f infra/docker/compose.yml down
+
+# 3. Development mode
+npm run dev
 ```
+
+## Testing Commands
+
+| Command | Infrastructure | Duration | What it tests |
+|---------|---------------|----------|---------------|
+| `npm test` | None | ~2s | Alias for `test:basic` |
+| `npm run test:basic` | None (mocks) | ~2s | Unit tests, OpenAPI validation |
+| `npm run test:integration` | Docker Compose | ~5s | Real PostgreSQL + Redis |
+| `npm run test:watch` | None (mocks) | - | Watch mode for development |
+| `npm run test:all` | Both | ~7s | Basic + Integration sequentially |
+## Test Credentials Security
+
+### Development/Test Credentials
+
+```env
+# .env.test (NOT in production)
+DATABASE_URL=postgresql://testuser:testpass@localhost:5432/peerit_test
+REDIS_URL=redis://localhost:6379/1
+JWT_SECRET=test-secret-not-for-production
+```
+
+### Production Deployment
+
+- Test credentials must be excluded from production builds
+- Use build-time secrets or external credential injection
+- Consider test-specific Docker Compose files
+
+## Docker Integration Options
+
+### Option A: Multi-stage Dockerfile with Tests
+
+```dockerfile
+# Test stage
+FROM node:18-alpine AS test
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run test:basic
+# Only proceed to production if tests pass
+
+# Production stage  
+FROM node:18-alpine AS production
+# ... production build without test dependencies
+```
+
+### Option B: Test Compose
+
+```yaml
+# docker-compose.test.yml
+services:
+  auth-service-test:
+    build: .
+    environment:
+      NODE_ENV: test
+      TEST_INTEGRATION: true
+    depends_on:
+      - postgres-test
+      - redis-test
+    command: npm run test:integration
+```
+
+## Features
+
+- **JWT Authentication**: Access and refresh token management
+- **Magic Link Authentication**: Email-based passwordless login
+- **Password Management**: Secure password reset functionality
+- **Session Management**: Redis-based session storage with fallbacks
+- **Monitoring**: Industry-standard health and info endpoints
+- **Development Ready**: Mock database and session modes for development
 
 ## API Documentation
 
