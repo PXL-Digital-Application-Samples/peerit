@@ -63,7 +63,7 @@ router.post('/magic-link',
       // TODO: Send email with magic link
       // For now, in development, we'll log it
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🔗 Magic Link for ${email}: http://localhost:3020/auth/magic/${magicLink.token}`);
+        console.log(`🔗 Magic Link for ${email}: http://localhost:3020/magic/${magicLink.token}`);
       }
 
       res.json({
@@ -170,6 +170,60 @@ router.post('/logout',
       res.status(500).json({
         error: 'LOGOUT_FAILED',
         message: 'Failed to logout',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+);
+
+// GET /auth/validate - Validate JWT token (service-to-service)
+router.get('/validate',
+  async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader) {
+        return res.status(401).json({
+          error: 'MISSING_TOKEN',
+          message: 'Authorization header is required',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      if (!authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({
+          error: 'MISSING_TOKEN',
+          message: 'Authorization header must use Bearer format',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      const token = authHeader.substring(7);
+      
+      try {
+        const payload = await authService.verifyAccessToken(token);
+        
+        res.json({
+          valid: true,
+          userId: payload.userId,
+          sessionId: payload.sessionId,
+          email: payload.email,
+          exp: payload.exp,
+          iat: payload.iat
+        });
+      } catch (tokenError) {
+        res.status(401).json({
+          error: 'INVALID_TOKEN',
+          message: 'Token is invalid or expired',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Token validation error:', error.message);
+
+      res.status(500).json({
+        error: 'VALIDATION_FAILED',
+        message: 'Failed to validate token',
         timestamp: new Date().toISOString()
       });
     }

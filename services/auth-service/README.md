@@ -29,10 +29,10 @@ npm run test:redis
 
 ## API Documentation
 
-- **Live API Docs**: http://localhost:3020/auth/docs
+- **Live API Docs**: http://localhost:3020/docs
 - **OpenAPI Specification**: [openapi.yaml](./openapi.yaml)
-- **Health Check**: http://localhost:3020/auth/health
-- **Service Info**: http://localhost:3020/auth/info
+- **Health Check**: http://localhost:3020/health
+- **Service Info**: http://localhost:3020/info
 
 ## Architecture
 
@@ -123,6 +123,6 @@ The Dockerfile uses production-ready multi-stage builds with:
 - Set secure JWT_SECRET (minimum 32 characters)
 - Configure proper CORS origins via FRONTEND_URL
 - Use HTTPS in production environments
-- Monitor via `/auth/health` and `/auth/info` endpoints
+- Monitor via `/health` and `/info` endpoints
 - Enable health check endpoints for load balancers
 - Consider Redis clustering for high availability

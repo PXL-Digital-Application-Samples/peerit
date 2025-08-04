@@ -21,13 +21,13 @@ tags:
     description: User authentication endpoints
   - name: Password Management
     description: Password reset and management
-  - name: Service Integration
+  - name: Service
     description: Internal service endpoints
   - name: Monitoring
     description: Health checks and metrics
 
 paths:
-  /auth/login:
+  /login:
     post:
       operationId: loginUser
       summary: Authenticate user with email/password
@@ -104,7 +104,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/magic-link:
+  /magic-link:
     post:
       operationId: requestMagicLink
       summary: Request magic link authentication
@@ -174,7 +174,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/magic/{token}:
+  /magic/{token}:
     get:
       operationId: validateMagicLink
       summary: Validate magic link token
@@ -209,7 +209,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/refresh:
+  /refresh:
     post:
       operationId: refreshToken
       summary: Refresh access token
@@ -251,7 +251,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/logout:
+  /logout:
     post:
       operationId: logoutUser
       summary: Logout user
@@ -277,7 +277,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/reset-password:
+  /reset-password:
     post:
       operationId: requestPasswordReset
       summary: Request password reset
@@ -361,12 +361,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/validate:
+  /validate:
     get:
       operationId: validateToken
       summary: Validate JWT token (internal service use)
       description: Validates JWT token and returns user information for service-to-service communication
-      tags: [Service Integration]
+      tags: [Service]
       security:
         - bearerAuth: []
       responses:
@@ -383,7 +383,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/health:
+  /health:
     get:
       operationId: getHealthStatus
       summary: Health check endpoint
@@ -450,7 +450,7 @@ paths:
                   error:
                     type: string
 
-  /auth/info:
+  /info:
     get:
       operationId: getServiceInfo
       summary: Service information endpoint
@@ -555,7 +555,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/docs:
+  /docs:
     get:
       operationId: getApiDocumentation
       summary: API documentation

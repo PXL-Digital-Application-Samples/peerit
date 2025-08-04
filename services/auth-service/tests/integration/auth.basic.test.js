@@ -38,9 +38,9 @@ describe('Auth Service - Basic Integration Tests', () => {
   });
 
   describe('Health and Documentation', () => {
-    test('GET /auth/health should return health status', async () => {
+    test('GET /health should return health status', async () => {
       const response = await request(app)
-        .get('/auth/health')
+        .get('/health')
         .expect(503); // Service down because no database connected
 
       expect(response.body).toHaveProperty('status', 'DOWN');
@@ -49,9 +49,9 @@ describe('Auth Service - Basic Integration Tests', () => {
       expect(response.body).toHaveProperty('dependencies');
     });
 
-    test('GET /auth/docs/json should return OpenAPI spec', async () => {
+    test('GET /docs/openapi.json should return OpenAPI spec', async () => {
       const response = await request(app)
-        .get('/auth/docs/json')
+        .get('/docs/openapi.json')
         .expect(200);
 
       expect(response.body).toHaveProperty('openapi');
@@ -63,7 +63,7 @@ describe('Auth Service - Basic Integration Tests', () => {
   describe('Validation', () => {
     test('should reject invalid email format', async () => {
       const response = await request(app)
-        .post('/auth/login')
+        .post('/login')
         .send({
           email: 'invalid-email',
           password: 'StrongPassword123!'
@@ -75,7 +75,7 @@ describe('Auth Service - Basic Integration Tests', () => {
 
     test('should require both email and password', async () => {
       const response = await request(app)
-        .post('/auth/login')
+        .post('/login')
         .send({
           email: 'test@example.com'
           // missing password
@@ -89,7 +89,7 @@ describe('Auth Service - Basic Integration Tests', () => {
   describe('Error Handling', () => {
     test('should handle 404 for non-existent endpoints', async () => {
       const response = await request(app)
-        .get('/auth/non-existent')
+        .get('/non-existent')
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
@@ -99,7 +99,7 @@ describe('Auth Service - Basic Integration Tests', () => {
   describe('Security Headers', () => {
     test('should include security headers', async () => {
       const response = await request(app)
-        .get('/auth/health')
+        .get('/health')
         .expect(503);
 
       expect(response.headers).toHaveProperty('x-content-type-options');
@@ -108,7 +108,7 @@ describe('Auth Service - Basic Integration Tests', () => {
 
     test('should handle CORS', async () => {
       const response = await request(app)
-        .options('/auth/login')
+        .options('/login')
         .set('Origin', 'http://localhost:3000')
         .expect(204);
 

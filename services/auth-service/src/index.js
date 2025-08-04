@@ -49,7 +49,7 @@ app.use(generalRateLimit);
 // Add express-actuator for industry-standard monitoring endpoints
 const databaseService = require('./services/database');
 
-app.use('/auth', actuator({
+app.use('/management', actuator({
   basePath: '/management',
   customEndpoints: [
     {
@@ -78,32 +78,22 @@ app.use('/auth', actuator({
 
 // API Documentation
 if (process.env.SWAGGER_ENABLED !== 'false') {
-  app.use('/auth/docs', swaggerUi.serve);
-  app.get('/auth/docs', swaggerUi.setup(openApiSpec, {
-    explorer: true,
-    customSiteTitle: 'Peerit Auth Service API',
-    swaggerOptions: {
-      persistAuthorization: true,
-      displayRequestDuration: true,
-      docExpansion: 'none',
-      filter: true,
-      tryItOutEnabled: true
-    }
-  }));
-
-  // Serve OpenAPI spec as JSON and YAML
-  app.get('/auth/docs/json', (req, res) => {
+  // Simple API docs - current best practice URLs
+  app.get('/docs/openapi.json', (req, res) => {
     res.json(openApiSpec);
   });
 
-  app.get('/auth/docs/yaml', (req, res) => {
+  app.get('/docs/openapi.yaml', (req, res) => {
     res.type('text/yaml');
     res.send(YAML.stringify(openApiSpec, 4));
   });
+
+  // Simple Swagger UI at /docs
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 }
 
-// Backward compatibility endpoints for OpenAPI spec
-app.get('/auth/health', async (req, res) => {
+// Health endpoint
+app.get('/health', async (req, res) => {
   try {
     const dbHealth = await databaseService.healthCheck();
     const sessionHealth = await databaseService.getSessionHealth();
@@ -117,6 +107,8 @@ app.get('/auth/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '1.0.0',
       uptime: process.uptime(),
+      database: dbHealth,
+      session: sessionHealth,
       dependencies: {
         database: dbHealth,
         session: sessionHealth
@@ -132,10 +124,16 @@ app.get('/auth/health', async (req, res) => {
   }
 });
 
-app.get('/auth/info', async (req, res) => {
+app.get('/info', async (req, res) => {
   try {
     const dbHealth = await databaseService.healthCheck();
     const sessionHealth = await databaseService.getSessionHealth();
+    
+    // Sanitize database URL to hide credentials
+    let sanitizedUrl = process.env.DATABASE_URL || '';
+    if (sanitizedUrl.includes('://')) {
+      sanitizedUrl = sanitizedUrl.replace(/:\/\/[^:]+:[^@]+@/, '://***:***@');
+    }
     
     res.json({
       service: {
@@ -146,18 +144,19 @@ app.get('/auth/info', async (req, res) => {
       environment: {
         nodeVersion: process.version,
         environment: process.env.NODE_ENV || 'development',
-        port: PORT
+        port: parseInt(PORT)
       },
       database: {
         provider: 'prisma',
         type: dbHealth.type || 'postgresql',
+        url: sanitizedUrl,
         connected: dbHealth.status === 'UP',
         mode: dbHealth.mode || 'connected'
       },
-      session: {
-        provider: sessionHealth.provider || 'redis',
-        connected: sessionHealth.status === 'UP',
-        mode: sessionHealth.mode || 'redis'
+      sessions: {
+        provider: process.env.REDIS_URL ? 'redis' : 'memory',
+        connected: sessionHealth.connected,
+        mode: sessionHealth.mode || 'memory'
       },
       features: {
         magicLinks: true,
@@ -178,8 +177,8 @@ app.get('/auth/info', async (req, res) => {
   }
 });
 
-// Routes
-app.use('/auth', authRoutes);
+// Routes - mount directly without /auth prefix
+app.use('/', authRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -188,7 +187,7 @@ app.get('/', (req, res) => {
     version: process.env.npm_package_version || '1.0.0',
     status: 'running',
     timestamp: new Date().toISOString(),
-    documentation: '/auth/docs'
+    documentation: '/docs'
   });
 });
 
@@ -224,10 +223,10 @@ process.on('SIGINT', async () => {
 // Start server
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Auth Service running on port ${PORT}`);
-  console.log(`📚 API Documentation: http://localhost:${PORT}/auth/docs`);
-  console.log(`🔍 Health Check: http://localhost:${PORT}/auth/health`);
-  console.log(`📋 OpenAPI JSON: http://localhost:${PORT}/auth/docs/json`);
-  console.log(`📋 OpenAPI YAML: http://localhost:${PORT}/auth/docs/yaml`);
+  console.log(`📚 API Documentation: http://localhost:${PORT}/docs`);
+  console.log(`🔍 Health Check: http://localhost:${PORT}/health`);
+  console.log(`📋 OpenAPI JSON: http://localhost:${PORT}/docs/openapi.json`);
+  console.log(`📋 OpenAPI YAML: http://localhost:${PORT}/docs/openapi.yaml`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 

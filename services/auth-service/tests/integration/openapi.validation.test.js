@@ -1,5 +1,4 @@
 const request = require('supertest');
-const app = require('../../src/index');
 const SwaggerParser = require('@apidevtools/swagger-parser');
 const Ajv = require('ajv');
 const addFormats = require('ajv-formats');
@@ -8,6 +7,8 @@ const path = require('path');
 const yaml = require('js-yaml');
 
 describe('OpenAPI Specification Validation', () => {
+  let app;
+  let server;
   let openApiSpec;
   let ajv;
 
@@ -23,15 +24,27 @@ describe('OpenAPI Specification Validation', () => {
     // Setup JSON schema validator
     ajv = new Ajv({ allErrors: true, strict: false });
     addFormats(ajv);
+
+    // Create app instance for this test suite
+    delete require.cache[require.resolve('../../src/index')];
+    app = require('../../src/index');
+  });
+
+  afterAll(async () => {
+    if (server) {
+      await new Promise((resolve) => {
+        server.close(resolve);
+      });
+    }
   });
 
   describe('Health Endpoint OpenAPI Compliance', () => {
     it('should match OpenAPI spec for successful health check', async () => {
       const response = await request(app)
-        .get('/auth/health');
+        .get('/health');
 
       // Get the schema for the health endpoint
-      const healthSchema = openApiSpec.paths['/auth/health'].get.responses['200'].content['application/json'].schema;
+      const healthSchema = openApiSpec.paths['/health'].get.responses['200'].content['application/json'].schema;
       
       // Validate response against schema
       const validate = ajv.compile(healthSchema);
@@ -48,10 +61,10 @@ describe('OpenAPI Specification Validation', () => {
     it('should have correct response format for unhealthy service', async () => {
       // This test checks that if we get a 503, it matches the spec
       const response = await request(app)
-        .get('/auth/health');
+        .get('/health');
 
       if (response.status === 503) {
-        const unhealthySchema = openApiSpec.paths['/auth/health'].get.responses['503'].content['application/json'].schema;
+        const unhealthySchema = openApiSpec.paths['/health'].get.responses['503'].content['application/json'].schema;
         const validate = ajv.compile(unhealthySchema);
         const isValid = validate(response.body);
         
@@ -67,11 +80,11 @@ describe('OpenAPI Specification Validation', () => {
   describe('Info Endpoint OpenAPI Compliance', () => {
     it('should match OpenAPI spec for service info', async () => {
       const response = await request(app)
-        .get('/auth/info')
+        .get('/info')
         .expect(200);
 
       // Get the schema for the info endpoint
-      const infoSchema = openApiSpec.paths['/auth/info'].get.responses['200'].content['application/json'].schema;
+      const infoSchema = openApiSpec.paths['/info'].get.responses['200'].content['application/json'].schema;
       
       // Validate response against schema
       const validate = ajv.compile(infoSchema);
@@ -87,10 +100,10 @@ describe('OpenAPI Specification Validation', () => {
 
     it('should include all required properties per OpenAPI spec', async () => {
       const response = await request(app)
-        .get('/auth/info')
+        .get('/info')
         .expect(200);
 
-      const schema = openApiSpec.paths['/auth/info'].get.responses['200'].content['application/json'].schema;
+      const schema = openApiSpec.paths['/info'].get.responses['200'].content['application/json'].schema;
       const requiredProps = schema.required || [];
       
       // Check that all required properties are present
@@ -115,7 +128,7 @@ describe('OpenAPI Specification Validation', () => {
   describe('Validate Endpoint OpenAPI Compliance', () => {
     it('should return 401 error matching OpenAPI spec for missing token', async () => {
       const response = await request(app)
-        .get('/auth/validate')
+        .get('/validate')
         .expect(401);
 
       // Check if the response matches the error schema
@@ -135,8 +148,9 @@ describe('OpenAPI Specification Validation', () => {
     it('should serve Swagger UI documentation', async () => {
       const response = await request(app)
         .get('/auth/docs')
-        .expect(200);
+        .redirects(1); // Follow redirects
 
+      expect(response.status).toBe(200);
       expect(response.headers['content-type']).toMatch(/html/);
       expect(response.text).toContain('Swagger UI');
     });
