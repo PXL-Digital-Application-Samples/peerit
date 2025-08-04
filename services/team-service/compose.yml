@@ -1,0 +1,45 @@
+# Team Service Docker Compose
+# Run with: docker compose up
+# Or from root: docker compose up team-service
+
+version: '3.8'
+
+services:
+  team-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peerit-team-service
+    environment:
+      # Service Configuration
+      - PORT=3022
+      - NODE_ENV=development
+      
+      # Database Configuration (isolated database)
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_teams
+      
+      # Authentication
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+      - AUTH_SERVICE_URL=http://auth-service:3020
+      
+      # Service Dependencies
+      - USER_SERVICE_URL=http://user-service:3021
+    ports:
+      - "3022:3022"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3022/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+# Import shared infrastructure
+networks:
+  peerit-network:
+    external: true

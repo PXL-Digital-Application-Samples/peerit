@@ -1,0 +1,39 @@
+# API Gateway Docker Compose
+# Run with: docker compose up
+# Or from root: docker compose up api-gateway
+
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peerit-api-gateway
+    environment:
+      # Service URLs for routing
+      - BFF_URL=http://bff:3001
+      - AUTH_SERVICE_URL=http://auth-service:3020
+      - USER_SERVICE_URL=http://user-service:3021
+      - TEAM_SERVICE_URL=http://team-service:3022
+      - RUBRIC_SERVICE_URL=http://rubric-service:3023
+      - REVIEW_SERVICE_URL=http://review-service:3024
+      - REPORT_SERVICE_URL=http://report-service:3025
+      - EMAIL_SERVICE_URL=http://email-service:3026
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - peerit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+# Import shared infrastructure
+networks:
+  peerit-network:
+    external: true

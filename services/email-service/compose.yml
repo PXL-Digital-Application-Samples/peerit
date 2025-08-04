@@ -1,0 +1,57 @@
+# Email Service Docker Compose
+# Run with: docker compose up
+# Or from root: docker compose up email-service
+
+version: '3.8'
+
+services:
+  email-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peerit-email-service
+    environment:
+      # Service Configuration
+      - PORT=3026
+      - NODE_ENV=development
+      
+      # Database Configuration (isolated database)
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_email
+      
+      # Authentication
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+      - AUTH_SERVICE_URL=http://auth-service:3020
+      
+      # SMTP Configuration (configure for your email provider)
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_SECURE=false
+      - SMTP_USER=your-email@gmail.com
+      - SMTP_PASS=your-app-password
+      - FROM_EMAIL=noreply@peerit.dev
+      - FROM_NAME=Peerit Platform
+      
+      # Email Configuration
+      - EMAIL_QUEUE_CONCURRENCY=5
+      - EMAIL_RETRY_ATTEMPTS=3
+      - EMAIL_RETRY_DELAY=30000
+      - TEMPLATE_CACHE_TTL=3600
+    ports:
+      - "3026:3026"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3026/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+# Import shared infrastructure
+networks:
+  peerit-network:
+    external: true

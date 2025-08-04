@@ -1,0 +1,55 @@
+# BFF (Backend-for-Frontend) Docker Compose
+# Run with: docker compose up
+# Or from root: docker compose up bff
+
+version: '3.8'
+
+services:
+  bff:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peerit-bff
+    environment:
+      # Service Configuration
+      - PORT=3001
+      - NODE_ENV=development
+      
+      # Redis Configuration (dedicated database for caching)
+      - REDIS_URL=redis://redis:6379/2
+      
+      # Backend Service URLs
+      - ORCHESTRATOR_URL=http://orchestrator:3010
+      - AUTH_SERVICE_URL=http://auth-service:3020
+      - USER_SERVICE_URL=http://user-service:3021
+      - TEAM_SERVICE_URL=http://team-service:3022
+      - RUBRIC_SERVICE_URL=http://rubric-service:3023
+      - REVIEW_SERVICE_URL=http://review-service:3024
+      - REPORT_SERVICE_URL=http://report-service:3025
+      
+      # Caching Configuration
+      - CACHE_TTL=300
+      - CACHE_MAX_SIZE=1000
+      
+      # CORS Configuration
+      - CORS_ORIGIN=http://localhost:3000
+      - CORS_CREDENTIALS=true
+    ports:
+      - "3001:3001"
+    networks:
+      - peerit-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+# Import shared infrastructure
+networks:
+  peerit-network:
+    external: true

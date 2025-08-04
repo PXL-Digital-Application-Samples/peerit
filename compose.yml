@@ -1,0 +1,342 @@
+# Peerit - Full Stack Docker Compose
+# This orchestrates all services for complete local development
+# 
+# Usage:
+#   docker compose up                     # Start everything
+#   docker compose up frontend bff       # Start only frontend + BFF
+#   docker compose up --profile tools     # Include admin tools (pgAdmin, Redis Commander)
+#   docker compose down                   # Stop everything
+#   docker compose down -v                # Stop and remove volumes (clean slate)
+
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: peerit-postgres
+    environment:
+      POSTGRES_USER: peerit
+      POSTGRES_PASSWORD: peerit_dev
+      POSTGRES_DB: peerit
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - peerit-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U peerit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: peerit-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - peerit-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Core Services
+  orchestrator:
+    build:
+      context: ./services/orchestrator
+      dockerfile: Dockerfile
+    container_name: peerit-orchestrator
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3010
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_orchestrator
+      - REDIS_URL=redis://redis:6379/1
+    ports:
+      - "3010:3010"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: peerit-auth-service
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3020
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_auth
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+    ports:
+      - "3020:3020"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: peerit-user-service
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3021
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_users
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+    ports:
+      - "3021:3021"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - user_uploads:/app/uploads
+    restart: unless-stopped
+
+  team-service:
+    build:
+      context: ./services/team-service
+      dockerfile: Dockerfile
+    container_name: peerit-team-service
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3022
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_teams
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+    ports:
+      - "3022:3022"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  rubric-service:
+    build:
+      context: ./services/rubric-service
+      dockerfile: Dockerfile
+    container_name: peerit-rubric-service
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3023
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_rubrics
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+    ports:
+      - "3023:3023"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - rubric_uploads:/app/uploads
+    restart: unless-stopped
+
+  review-service:
+    build:
+      context: ./services/review-service
+      dockerfile: Dockerfile
+    container_name: peerit-review-service
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3024
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_reviews
+      - REDIS_URL=redis://redis:6379/3
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+    ports:
+      - "3024:3024"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  report-service:
+    build:
+      context: ./services/report-service
+      dockerfile: Dockerfile
+    container_name: peerit-report-service
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3025
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_reports
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+    ports:
+      - "3025:3025"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - report_storage:/app/reports
+    restart: unless-stopped
+
+  email-service:
+    build:
+      context: ./services/email-service
+      dockerfile: Dockerfile
+    container_name: peerit-email-service
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3026
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_email
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+    ports:
+      - "3026:3026"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Application Layer
+  bff:
+    build:
+      context: ./apps/bff
+      dockerfile: Dockerfile
+    container_name: peerit-bff
+    env_file:
+      - ./infra/docker/.env.shared
+    environment:
+      - PORT=3001
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379/2
+      - CORS_ORIGIN=http://localhost:3000
+    ports:
+      - "3001:3001"
+    networks:
+      - peerit-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      orchestrator:
+        condition: service_started
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./apps/api-gateway
+      dockerfile: Dockerfile
+    container_name: peerit-api-gateway
+    env_file:
+      - ./infra/docker/.env.shared
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - peerit-network
+    depends_on:
+      - bff
+      - auth-service
+      - user-service
+      - team-service
+      - rubric-service
+      - review-service
+      - report-service
+      - email-service
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: peerit-frontend
+    environment:
+      - VITE_API_BASE_URL=http://localhost
+      - VITE_BFF_BASE_URL=http://localhost:3001
+    ports:
+      - "3000:80"
+    networks:
+      - peerit-network
+    depends_on:
+      - api-gateway
+      - bff
+    restart: unless-stopped
+
+  # Development Tools (use --profile tools to include)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: peerit-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@peerit.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - peerit-network
+    profiles:
+      - tools
+    depends_on:
+      - postgres
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: peerit-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - peerit-network
+    profiles:
+      - tools
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  user_uploads:
+    driver: local
+  rubric_uploads:
+    driver: local
+  report_storage:
+    driver: local
+
+networks:
+  peerit-network:
+    driver: bridge
+    name: peerit-network

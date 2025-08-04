@@ -1,0 +1,52 @@
+# User Service Docker Compose
+# Run with: docker compose up
+# Or from root: docker compose up user-service
+
+version: '3.8'
+
+services:
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peerit-user-service
+    environment:
+      # Service Configuration
+      - PORT=3021
+      - NODE_ENV=development
+      
+      # Database Configuration (isolated database)
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_users
+      
+      # Authentication
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+      - AUTH_SERVICE_URL=http://auth-service:3020
+      
+      # File Upload Configuration
+      - MAX_FILE_SIZE=10MB
+      - UPLOAD_PATH=/app/uploads
+    ports:
+      - "3021:3021"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3021/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    volumes:
+      - user_uploads:/app/uploads
+
+volumes:
+  user_uploads:
+    driver: local
+
+# Import shared infrastructure
+networks:
+  peerit-network:
+    external: true

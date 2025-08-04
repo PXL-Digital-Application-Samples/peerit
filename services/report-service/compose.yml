@@ -1,0 +1,58 @@
+# Report Service Docker Compose
+# Run with: docker compose up
+# Or from root: docker compose up report-service
+
+version: '3.8'
+
+services:
+  report-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peerit-report-service
+    environment:
+      # Service Configuration
+      - PORT=3025
+      - NODE_ENV=development
+      
+      # Database Configuration (isolated database)
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_reports
+      
+      # Authentication
+      - JWT_SECRET=auth_service_jwt_secret_change_in_production
+      - AUTH_SERVICE_URL=http://auth-service:3020
+      
+      # Service Dependencies
+      - REVIEW_SERVICE_URL=http://review-service:3024
+      - USER_SERVICE_URL=http://user-service:3021
+      - TEAM_SERVICE_URL=http://team-service:3022
+      
+      # Report Generation Configuration
+      - REPORT_STORAGE_PATH=/app/reports
+      - PDF_GENERATION_TIMEOUT=30000
+      - CHART_RENDERING_TIMEOUT=15000
+    ports:
+      - "3025:3025"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3025/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    volumes:
+      - report_storage:/app/reports
+
+volumes:
+  report_storage:
+    driver: local
+
+# Import shared infrastructure
+networks:
+  peerit-network:
+    external: true

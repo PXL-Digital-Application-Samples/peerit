@@ -36,10 +36,130 @@ Each service is completely independent and can be developed, tested, and deploye
 
 ## Getting Started
 
-1. Clone the repository
-2. Navigate to the specific service you want to work on
-3. Follow the service-specific README for setup instructions
+### Prerequisites
+
+- Docker Desktop (includes Docker Compose)
+- That's it! No Node.js required for Docker development.
+
+> **For local development without Docker**: Node.js 18+ required
+
+### Quick Start
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd peerit
+
+# Start everything (Docker will handle the setup)
+docker compose up
+
+# That's it! Access the application:
+# Frontend: http://localhost:3000
+# API Gateway: http://localhost:80
+# BFF: http://localhost:3001
+```
+
+> **Note**: First startup takes longer as Docker downloads images and builds services. Subsequent starts are much faster.
+
+### Development Workflows
+
+```bash
+# Start everything
+docker compose up
+
+# Start in background
+docker compose up -d
+
+# Start only infrastructure (PostgreSQL + Redis)
+docker compose up postgres redis
+
+# Start specific services
+docker compose up frontend bff api-gateway
+
+# View logs
+docker compose logs -f
+
+# Stop everything
+docker compose down
+
+# Clean slate (removes all data)
+docker compose down -v
+```
+
+### Individual Service Development
+
+Each service can be developed independently:
+
+```bash
+# Start infrastructure
+docker compose up postgres redis -d
+
+# Work on auth service
+cd services/auth-service
+docker compose up
+# OR for local development:
+npm install && npm run dev
+
+# Work on frontend  
+cd apps/frontend
+npm install && npm run dev
+```
+
+## Docker Compose Architecture
+
+### Three-Tier Structure
+
+1. **Infrastructure** (`infra/docker/compose.yml`) - PostgreSQL, Redis, shared services
+2. **Service Level** (individual `compose.yml`) - Each service with dependencies
+3. **Full Stack** (root `compose.yml`) - Complete development environment
+
+### Service Isolation
+
+- **Databases**: Each service has its own PostgreSQL database
+- **Redis**: Services use different Redis database numbers
+- **Networks**: All services communicate via `peerit-network`
+- **Volumes**: Persistent storage for data and uploads
+
+See [docs/DOCKER-COMPOSE.md](docs/DOCKER-COMPOSE.md) for detailed Docker usage instructions.
 
 ## Deployment
 
-Services can be deployed independently using Docker containers. See `infra/` directory for deployment configurations.
+### Local Development
+
+Use Docker Compose for local development with service isolation:
+
+```bash
+docker compose up              # Start everything
+docker compose up --profile tools  # Include pgAdmin and Redis Commander
+```
+
+### Production
+
+Services can be deployed independently using Docker containers. Each service includes:
+
+- Multi-stage Dockerfile for optimized builds
+- Health checks for container orchestration  
+- Environment-based configuration
+- Language-agnostic interfaces for easy migration
+
+See `infra/` directory for deployment configurations and Kubernetes manifests.
+
+## Documentation
+
+- [Docker Compose Guide](docs/DOCKER-COMPOSE.md) - Local development with Docker
+- [Development Guide](docs/DEVELOPMENT.md) - General development workflow
+- [Migration Guide](docs/MIGRATION.md) - Language migration instructions
+- [API Documentation](docs/API.md) - Service API contracts
+
+## Service Architecture
+
+Each service is completely independent with:
+
+- Own database and data isolation
+- Independent deployment pipeline
+- Language-agnostic interfaces
+- Docker containerization
+- Health checks and monitoring
+- Comprehensive logging
+
+This enables teams to work independently and migrate services to optimal languages while maintaining system consistency.

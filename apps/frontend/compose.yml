@@ -1,0 +1,35 @@
+# Frontend Application Docker Compose
+# Run with: docker compose up
+# Or from root: docker compose up frontend
+
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peerit-frontend
+    environment:
+      # API Configuration
+      - VITE_API_BASE_URL=http://localhost
+      - VITE_BFF_BASE_URL=http://localhost:3001
+      
+      # Development Configuration
+      - NODE_ENV=development
+    ports:
+      - "3000:80"
+    networks:
+      - peerit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+# Import shared infrastructure
+networks:
+  peerit-network:
+    external: true

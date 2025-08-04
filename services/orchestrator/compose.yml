@@ -1,0 +1,57 @@
+# Orchestrator Service Docker Compose
+# Run with: docker compose up
+# Or from root: docker compose up orchestrator
+
+version: '3.8'
+
+services:
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: peerit-orchestrator
+    environment:
+      # Service Configuration
+      - PORT=3010
+      - NODE_ENV=development
+      
+      # Database Configuration (isolated database)
+      - DATABASE_URL=postgresql://peerit:peerit_dev@postgres:5432/peerit_orchestrator
+      
+      # Redis Configuration (dedicated database for workflows)
+      - REDIS_URL=redis://redis:6379/1
+      
+      # Service URLs for orchestration
+      - AUTH_SERVICE_URL=http://auth-service:3020
+      - USER_SERVICE_URL=http://user-service:3021
+      - TEAM_SERVICE_URL=http://team-service:3022
+      - RUBRIC_SERVICE_URL=http://rubric-service:3023
+      - REVIEW_SERVICE_URL=http://review-service:3024
+      - REPORT_SERVICE_URL=http://report-service:3025
+      - EMAIL_SERVICE_URL=http://email-service:3026
+      
+      # Workflow Configuration
+      - WORKFLOW_TIMEOUT=300000
+      - MAX_RETRY_ATTEMPTS=3
+      - SAGA_TIMEOUT=600000
+    ports:
+      - "3010:3010"
+    networks:
+      - peerit-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+# Import shared infrastructure
+networks:
+  peerit-network:
+    external: true
