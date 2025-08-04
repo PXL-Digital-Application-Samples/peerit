@@ -6,25 +6,40 @@ JWT-based authentication and session management service for the Peerit platform.
 
 ### 1. Basic Tests - Local, No Infrastructure
 **Command**: `npm run test:basic`
-- **Duration**: ~2 seconds
+- **Duration**: ~0.3 seconds (10 tests)
 - **Infrastructure**: None (mocks only)
-- **Tests**: Unit tests, basic API validation, OpenAPI compliance
+- **Tests**: Unit tests, basic API validation, environment checks
 - **Environment**: `NODE_ENV=test`, `SKIP_REDIS=true`
 - **Use case**: Fast feedback during development, CI pre-checks
 
 ### 2. Integration Tests - Docker Compose Infrastructure  
 **Command**: `npm run test:integration`
-- **Duration**: ~5 seconds
+- **Duration**: ~1.7 seconds (5 tests)
 - **Infrastructure**: Docker Compose (PostgreSQL + Redis)
 - **Tests**: Real database connections, session storage, full API flow
 - **Environment**: `NODE_ENV=test`, `TEST_INTEGRATION=true`
 - **Use case**: Pre-production validation, full system testing
 
 ### 3. Docker Build Integration
-**Options**:
-- **Option A**: Multi-stage Dockerfile runs tests during build
-- **Option B**: Separate test compose automatically runs tests
-- **Credentials**: Test credentials should NOT be in production images
+
+**Option A**: Multi-stage Dockerfile runs tests during build
+```bash
+# Build with integrated testing (tests must pass to proceed)
+docker build -f Dockerfile.multi-stage -t peerit-auth-service:tested .
+
+# If tests fail, build stops - no production image created
+```
+
+**Option B**: Separate test compose automatically runs tests
+```bash
+# Run integration tests in isolated Docker environment
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+
+# Clean up test containers
+docker compose -f docker-compose.test.yml down --volumes
+```
+
+**Credentials**: Test credentials should NOT be in production images
 
 ## Quick Start
 
@@ -48,11 +63,11 @@ npm run dev
 
 | Command | Infrastructure | Duration | What it tests |
 |---------|---------------|----------|---------------|
-| `npm test` | None | ~2s | Alias for `test:basic` |
-| `npm run test:basic` | None (mocks) | ~2s | Unit tests, OpenAPI validation |
-| `npm run test:integration` | Docker Compose | ~5s | Real PostgreSQL + Redis |
+| `npm test` | None | ~0.3s | Alias for `test:basic` |
+| `npm run test:basic` | None (mocks) | ~0.3s | Unit tests, environment validation |
+| `npm run test:integration` | Docker Compose | ~1.7s | Real PostgreSQL + Redis |
 | `npm run test:watch` | None (mocks) | - | Watch mode for development |
-| `npm run test:all` | Both | ~7s | Basic + Integration sequentially |
+| `npm run test:all` | Both | ~2s | Basic + Integration sequentially |
 ## Test Credentials Security
 
 ### Development/Test Credentials
