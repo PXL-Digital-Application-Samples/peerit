@@ -1,35 +1,64 @@
-# Peerit – Requirements Specification
+# Peerit – Requirements and Architecture Specification
 
-Audience: Students (3–8 per team) doing long-term IT projects  
-Admin: Instructor or course staff  
-Use case: Students evaluate each other anonymously after a project or project phase.
+This document outlines the functional requirements and technical architecture of **Peerit**, a platform to facilitate anonymous peer evaluation for student project teams. It combines a domain-driven microservice architecture with a streamlined user experience.
 
-## 1. User Management
+---
 
-### 1.1. User Accounts
-- Managed internally (no external identity providers).
-- Defined via CSV import: name, email, team.
+## Audience and Use Case
+
+- **Audience**: Students (3–8 per team) doing long-term IT projects  
+- **Admin**: Instructor or course staff  
+- **Use case**: Students evaluate each other anonymously after a project or project phase.
+
+---
+
+## Architectural Goals
+
+- Clear separation of concerns using domain-driven service boundaries
+- Stateless, independently deployable microservices
+- Lightweight orchestrator for workflow coordination
+- Strong privacy, security, and immutability guarantees
+- Anonymous and immutable peer reviews
+- GDPR-aligned data handling
+- Technology-agnostic persistence with PostgreSQL by default (MySQL-compatible)
+
+---
+
+## User Management
+
+### User Accounts
+
+- Managed internally (no external identity providers)
+- Defined via CSV import: name, email, team
 - Login options:
   - Email/password (securely hashed via bcrypt or argon2)
   - Magic-link login via email
 
-### 1.2. Roles
-- Two roles: admin and student
+### Roles
+
+- Two roles: `admin` and `student`
 - Admins manage users, teams, sessions, rubrics, and reports
 
-## 2. Team & Project Management
+---
 
-### 2.1. Teams
+## Team & Project Management
+
+### Teams
+
 - Each student is in exactly one team
 - Defined via UI or CSV import
 
-### 2.2. Projects (Optional)
+### Projects (Optional)
+
 - Teams may be assigned to projects
 - Multiple review sessions per project are allowed
 
-## 3. Rubric Management
+---
 
-### 3.1. Rubrics (Question Sets)
+## Rubric Management
+
+### Rubrics (Question Sets)
+
 - Admin defines question sets with:
   - Likert-scale questions (0–5)
   - Optional text response questions
@@ -37,89 +66,211 @@ Use case: Students evaluate each other anonymously after a project or project ph
 - Rubrics are versioned
 - Once assigned to a session, a rubric version is locked
 
-### 3.2. Default Rubric (Pre-seeded)
+### Default Rubric (Pre-seeded)
+
 Likert-scale (0–5):
-1. Contributed significantly to the project
-2. Met deadlines and commitments
-3. Collaborated effectively
-4. Communicated clearly
-5. Showed initiative
-6. Demonstrated technical skill
-7. Receptive to feedback
+
+1. Contributed significantly to the project  
+2. Met deadlines and commitments  
+3. Collaborated effectively  
+4. Communicated clearly  
+5. Showed initiative  
+6. Demonstrated technical skill  
+7. Receptive to feedback  
 
 Optional open-ended:
+
 - What did this team member do particularly well?
 - How could they improve?
 
 Optional team reflection:
+
 - Biggest challenge?
 - How well did the team collaborate?
 
-## 4. Peer Review Workflow
+---
 
-### 4.1. Review Sessions
+## Peer Review Workflow
+
+### Review Sessions
+
 - Admin initiates review session via UI
-- Orchestrator:
-  - Creates session via review-service
-  - Retrieves users via user-service
-  - Generates magic links via auth-service
-  - Sends invitations via email-service
+- Orchestrator coordinates:
+  - Session creation (`review-service`)
+  - Team member lookup (`user-service`)
+  - Magic link generation (`auth-service`)
+  - Email invitations (`email-service`)
 
-### 4.2. Review Process
-- Each student gets a unique link to complete reviews anonymously
+### Review Process
+
+- Students receive unique anonymous links
 - Students evaluate all teammates
-- Admins can see submission status, not content
+- Admins can track submission status but not content
 
-### 4.3. Deadlines & Reminders
-- Deadline is enforced
-- Email reminders sent to incomplete reviewers (via email-service)
+### Deadlines & Reminders
 
-## 5. Reports & Results
+- Deadlines are enforced
+- Email reminders sent via `email-service` to incomplete reviewers
 
-### 5.1. Individual Reports
-- After session closes:
-  - report-service compiles feedback
-  - Includes score profile (e.g., spider chart)
-  - Anonymous comments included
+---
+
+## Reports & Results
+
+### Individual Reports
+
+- Generated after session closes
+- `report-service` compiles:
+  - Anonymous comments
+  - Score profile (e.g., spider chart)
 - Reports are immutable post-generation
 
-### 5.2. Admin Access
-- Admin can:
-  - View/export reports
-  - Track who submitted
-  - Export scores/comments by team/student (CSV, PDF)
+### Admin Access
 
-## 6. Admin Dashboard
-- User/team management (CSV or UI)
+- Admins can:
+  - View/export reports
+  - Track submission status
+  - Export scores/comments (CSV, PDF)
+
+---
+
+## Admin Dashboard
+
+- User and team management (CSV + UI)
 - Rubric management
-- Review session creation and monitoring
+- Review session control and tracking
 - Report viewing/exporting
 - Reminder email controls
 
-## 7. Privacy & Security
-- Student reviews are anonymous
+---
+
+## Privacy & Security
+
+- Reviews are anonymous
 - Passwords are securely hashed
 - Review data is immutable post-submission
 - GDPR-aligned data handling
+- Auth-service issues signed JWTs for access control
+- No cross-service DB access
 
-## 8. Technical Architecture Overview
+---
 
-- Frontend: Reactive SPA (e.g. SvelteKit or Vue.js)
-- API Gateway: Caddy (open-source, easy Kubernetes deployment)
-- Orchestrator: Coordinates multi-step workflows
-- Microservices:
-  - auth-service
-  - user-service
-  - team-service
-  - rubric-service
-  - review-service
-  - report-service
-  - email-service
-- Database: PostgreSQL (default); services must abstract DB access to enable switch to MySQL if needed
+## Technical Architecture Overview
 
-## 9. Future Scope
-- Self-assessment (definite)
-- Multi-phase reviews (e.g., mid + final)
-- Review quality scoring (optional)
-- Conflict detection & team dynamics questions (optional)
-- LMS integrations (e.g., Canvas) (optional)
+### Component Overview
+
+- **Frontend**: Reactive SPA (e.g. SvelteKit or Vue.js)
+- **API Gateway**: Caddy (HTTPS, routing, authentication forwarding)
+- **Backend-for-Frontend (BFF)**: Translates orchestrator responses into frontend-specific formats
+- **Orchestrator**: Coordinates multi-step workflows across services
+- **Microservices**:
+  - `auth-service`: Login and session management
+  - `user-service`: User/role management
+  - `team-service`: Team and project mapping
+  - `rubric-service`: Rubric definitions and versions
+  - `review-service`: Submission and review state
+  - `report-service`: Report generation
+  - `email-service`: Email sending and reminders
+- **Database**: One logical DB per service (PostgreSQL by default; MySQL-compatible schema)
+
+### Data Management
+
+- Each service abstracts its own persistence
+- No foreign key constraints between services
+- Denormalized data in `report-service` for immutability
+- All services own and isolate their data
+
+### Deployment
+
+- Docker-based development
+- Docker Compose for local orchestration
+- Kubernetes-ready (e.g. Helm, K3s)
+- CI/CD pipeline per service
+
+---
+
+## Workflows
+
+### Start Review Session
+
+```mermaid
+graph TD
+  Admin[Admin triggers start] --> O(Orchestrator)
+  O --> RS[review-service: create session]
+  O --> US[user-service: list team members]
+  O --> AS[auth-service: generate magic links]
+  O --> ES[email-service: send invitations]
+```
+
+### Submit Review
+
+```mermaid
+graph TD
+  Student --> RS[review-service: submit review]
+  RS --> O(Orchestrator notified)
+  O --> REP[report-service: update report]
+  O --> ES[email-service: send confirmation]
+  O -->|if all reviews done| REP2[report-service: finalize report]
+```
+
+### System Diagram
+
+```mermaid
+flowchart TB
+    subgraph Frontend
+        FE[Reactive SPA (SvelteKit/Vue)]
+    end
+
+    subgraph Gateway Layer
+        CADDY["API Gateway - Caddy"]
+        BFF["Backend-for-Frontend"]
+    end
+
+    subgraph Infrastructure
+        ORCH[Orchestrator]
+    end
+
+    subgraph Microservices
+        AUTH[auth-service]
+        USER[user-service]
+        TEAM[team-service]
+        RUBRIC[rubric-service]
+        REVIEW[review-service]
+        REPORT[report-service]
+        EMAIL[email-service]
+    end
+
+    subgraph External
+        SMTP[Email Server]
+        DB["PostgreSQL / MySQL"]
+    end
+
+    FE --> CADDY --> BFF --> ORCH
+    ORCH --> AUTH
+    ORCH --> USER
+    ORCH --> TEAM
+    ORCH --> RUBRIC
+    ORCH --> REVIEW
+    ORCH --> REPORT
+    ORCH --> EMAIL
+
+    EMAIL --> SMTP
+
+    AUTH --> DB
+    USER --> DB
+    TEAM --> DB
+    RUBRIC --> DB
+    REVIEW --> DB
+    REPORT --> DB
+    EMAIL --> DB
+```
+
+---
+
+## Future Scope
+
+- Self-assessment
+- Multi-phase reviews (e.g., midterm + final)
+- Reviewer quality scoring
+- Conflict detection & team dynamics insights
+- LMS integrations (e.g., Canvas)
+- Event bus (Kafka) or workflow engines (Temporal.io / Step Functions)
