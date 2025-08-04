@@ -9,16 +9,16 @@ describe('Service Endpoints - Live Tests', () => {
   
   beforeAll(async () => {
     try {
-      await axios.get(`${BASE_URL}/auth/health`, { timeout: 2000 });
+      await axios.get(`${BASE_URL}/health`, { timeout: 2000 });
     } catch (error) {
       console.log('⚠️ Service not running, skipping live tests');
       throw new Error('Service not available for testing');
     }
   });
 
-  describe('GET /auth/health', () => {
+  describe('GET /health', () => {
     it('should return health status with proper structure', async () => {
-      const response = await axios.get(`${BASE_URL}/auth/health`);
+      const response = await axios.get(`${BASE_URL}/health`);
       
       expect(response.status).toBeGreaterThanOrEqual(200);
       expect(response.data).toHaveProperty('status');
@@ -34,7 +34,7 @@ describe('Service Endpoints - Live Tests', () => {
     });
 
     it('should return appropriate status code based on health', async () => {
-      const response = await axios.get(`${BASE_URL}/auth/health`, {
+      const response = await axios.get(`${BASE_URL}/health`, {
         validateStatus: () => true // Accept any status code
       });
 
@@ -46,9 +46,9 @@ describe('Service Endpoints - Live Tests', () => {
     });
   });
 
-  describe('GET /auth/info', () => {
+  describe('GET /info', () => {
     it('should return comprehensive service information', async () => {
-      const response = await axios.get(`${BASE_URL}/auth/info`);
+      const response = await axios.get(`${BASE_URL}/info`);
       
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toContain('application/json');
@@ -93,7 +93,7 @@ describe('Service Endpoints - Live Tests', () => {
     });
 
     it('should sanitize database URL credentials', async () => {
-      const response = await axios.get(`${BASE_URL}/auth/info`);
+      const response = await axios.get(`${BASE_URL}/info`);
       
       if (response.data.database.url.includes('://')) {
         expect(response.data.database.url).toMatch(/\*\*\*:\*\*\*/);
@@ -102,7 +102,7 @@ describe('Service Endpoints - Live Tests', () => {
     });
 
     it('should show database type from connection string', async () => {
-      const response = await axios.get(`${BASE_URL}/auth/info`);
+      const response = await axios.get(`${BASE_URL}/info`);
       
       expect(response.data.database.type).toBeDefined();
       expect(typeof response.data.database.type).toBe('string');
@@ -110,10 +110,10 @@ describe('Service Endpoints - Live Tests', () => {
     });
   });
 
-  describe('GET /auth/validate', () => {
+  describe('GET /validate', () => {
     it('should require Authorization header', async () => {
       try {
-        await axios.get(`${BASE_URL}/auth/validate`);
+        await axios.get(`${BASE_URL}/validate`);
         fail('Should have thrown an error');
       } catch (error) {
         expect(error.response.status).toBe(401);
@@ -125,7 +125,7 @@ describe('Service Endpoints - Live Tests', () => {
 
     it('should require Bearer token format', async () => {
       try {
-        await axios.get(`${BASE_URL}/auth/validate`, {
+        await axios.get(`${BASE_URL}/validate`, {
           headers: { Authorization: 'InvalidFormat token123' }
         });
         fail('Should have thrown an error');
@@ -137,7 +137,7 @@ describe('Service Endpoints - Live Tests', () => {
 
     it('should validate token format', async () => {
       try {
-        await axios.get(`${BASE_URL}/auth/validate`, {
+        await axios.get(`${BASE_URL}/validate`, {
           headers: { Authorization: 'Bearer invalid-token' }
         });
         fail('Should have thrown an error');
@@ -148,9 +148,9 @@ describe('Service Endpoints - Live Tests', () => {
     });
   });
 
-  describe('GET /auth/docs', () => {
+  describe('GET /docs', () => {
     it('should serve Swagger UI documentation', async () => {
-      const response = await axios.get(`${BASE_URL}/auth/docs`);
+      const response = await axios.get(`${BASE_URL}/docs`);
       
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toMatch(/html/);
@@ -158,7 +158,7 @@ describe('Service Endpoints - Live Tests', () => {
     });
 
     it('should serve OpenAPI JSON specification', async () => {
-      const response = await axios.get(`${BASE_URL}/auth/docs/json`);
+      const response = await axios.get(`${BASE_URL}/docs/json`);
       
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toContain('application/json');
@@ -168,7 +168,7 @@ describe('Service Endpoints - Live Tests', () => {
     });
 
     it('should serve OpenAPI YAML specification', async () => {
-      const response = await axios.get(`${BASE_URL}/auth/docs/yaml`);
+      const response = await axios.get(`${BASE_URL}/docs/yaml`);
       
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toMatch(/yaml|text/);

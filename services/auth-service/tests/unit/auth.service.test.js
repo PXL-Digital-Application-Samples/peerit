@@ -88,8 +88,8 @@ describe('Auth Service', () => {
       
       const token = authService.generateAccessToken(payload);
       
-      // Verify access token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // Verify access token using the service's own method
+      const decoded = authService.verifyAccessToken(token);
       expect(decoded.userId).toBe(payload.userId);
       expect(decoded.email).toBe(payload.email);
       expect(decoded.type).toBe(payload.type);

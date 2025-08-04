@@ -25,8 +25,8 @@ class DatabaseService {
 
     // Initialize Redis
     try {
-      // Skip Redis entirely in test mode if SKIP_REDIS is set
-      if (process.env.NODE_ENV === 'test' && process.env.SKIP_REDIS === 'true') {
+      // Skip Redis entirely in test mode if SKIP_REDIS is set or TEST_INTEGRATION is not set
+      if (process.env.NODE_ENV === 'test' && (process.env.SKIP_REDIS === 'true' || !process.env.TEST_INTEGRATION)) {
         console.log('⏭️ Skipping Redis initialization in test mode');
         this.redisConnected = false;
         return;

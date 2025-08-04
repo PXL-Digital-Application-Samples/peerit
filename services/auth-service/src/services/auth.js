@@ -6,8 +6,9 @@ const db = require('./database');
 
 class AuthService {
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET_KEY;
-    this.accessTokenExpiry = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
+    this.jwtSecret = process.env.JWT_SECRET || process.env.JWT_SECRET_KEY;
+    this.jwtRefreshSecret = process.env.JWT_REFRESH_SECRET || this.jwtSecret;
+    this.accessTokenExpiry = process.env.JWT_EXPIRES_IN || process.env.JWT_ACCESS_EXPIRES_IN || '15m';
     this.refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
     this.bcryptCost = parseInt(process.env.BCRYPT_COST) || 12;
     this.magicLinkExpiryMinutes = parseInt(process.env.MAGIC_LINK_EXPIRES_IN?.replace('m', '')) || 15;
@@ -33,7 +34,7 @@ class AuthService {
     });
   }
 
-  generateRefreshToken() {
+  generateRefreshTokenCrypto() {
     return crypto.randomBytes(40).toString('hex');
   }
 
@@ -45,6 +46,108 @@ class AuthService {
       });
     } catch (error) {
       throw new Error('Invalid or expired token');
+    }
+  }
+
+  generateRefreshToken(payload) {
+    return jwt.sign(payload, this.jwtRefreshSecret, {
+      expiresIn: this.refreshTokenExpiry,
+      issuer: 'peerit-auth',
+      audience: 'peerit-services'
+    });
+  }
+
+  verifyRefreshToken(token) {
+    try {
+      return jwt.verify(token, this.jwtRefreshSecret, {
+        issuer: 'peerit-auth',
+        audience: 'peerit-services'
+      });
+    } catch (error) {
+      throw new Error('Invalid or expired refresh token');
+    }
+  }
+
+  generateTokens(userId, email) {
+    const payload = {
+      userId,
+      email,
+      type: 'access'
+    };
+    
+    const refreshPayload = {
+      userId,
+      email,
+      type: 'refresh'
+    };
+
+    return {
+      accessToken: this.generateAccessToken(payload),
+      refreshToken: this.generateRefreshToken(refreshPayload)
+    };
+  }
+
+  async authenticateUser(email, password) {
+    try {
+      const user = await db.findUserByEmail(email);
+
+      if (!user) {
+        return {
+          success: false,
+          reason: 'Invalid credentials'
+        };
+      }
+
+      // Check if account is locked
+      if (user.lockedUntil && new Date() < user.lockedUntil) {
+        const remainingTime = Math.ceil((user.lockedUntil - new Date()) / 1000 / 60);
+        return {
+          success: false,
+          reason: `Account locked. Try again in ${remainingTime} minutes`
+        };
+      }
+
+      if (!user.isActive) {
+        return {
+          success: false,
+          reason: 'Account is inactive'
+        };
+      }
+
+      // Verify password
+      const isValidPassword = await this.verifyPassword(password, user.passwordHash);
+
+      if (!isValidPassword) {
+        // Increment failed attempts
+        await db.incrementFailedLoginAttempts(user.id);
+        
+        // Lock account if too many failed attempts
+        if (user.failedLoginAttempts + 1 >= this.maxFailedAttempts) {
+          await db.lockAccount(user.id, this.lockoutDurationMs);
+          return {
+            success: false,
+            reason: 'Too many failed attempts. Account locked temporarily'
+          };
+        }
+
+        return {
+          success: false,
+          reason: 'Invalid credentials'
+        };
+      }
+
+      // Reset failed attempts on successful login
+      await db.resetFailedLoginAttempts(user.id);
+
+      return {
+        success: true,
+        user: user
+      };
+    } catch (error) {
+      return {
+        success: false,
+        reason: error.message
+      };
     }
   }
 
@@ -66,51 +169,91 @@ class AuthService {
     return crypto.randomBytes(32).toString('hex');
   }
 
-  async createMagicLink(email, purpose = 'login', sessionId = null) {
-    // Find or create user
-    let user = await db.findUserByEmail(email);
-    if (!user) {
-      // For magic links, we can create a user automatically
-      const tempPassword = crypto.randomBytes(32).toString('hex');
-      const passwordHash = await this.hashPassword(tempPassword);
-      user = await db.createUser(email, passwordHash);
+  async createMagicLink(userIdOrEmail, purpose = 'login', sessionId = null) {
+    let user;
+    let userId;
+    
+    // Handle both userId and email parameters
+    if (typeof userIdOrEmail === 'string' && userIdOrEmail.includes('@')) {
+      // It's an email
+      user = await db.findUserByEmail(userIdOrEmail);
+      if (!user) {
+        // For magic links, we can create a user automatically
+        const tempPassword = crypto.randomBytes(32).toString('hex');
+        const passwordHash = await this.hashPassword(tempPassword);
+        user = await db.createUser(userIdOrEmail, passwordHash);
+      }
+      userId = user.id;
+    } else {
+      // It's a userId
+      userId = userIdOrEmail;
     }
 
     const token = this.generateMagicLinkToken();
     const expiresAt = new Date(Date.now() + this.magicLinkExpiryMinutes * 60 * 1000);
 
-    await db.createMagicLinkToken(user.id, token, expiresAt, purpose, sessionId);
+    await db.createMagicLinkToken(userId, token, expiresAt, purpose, sessionId);
 
     return {
       token,
       expiresAt,
-      userId: user.id
+      userId: userId,
+      magicLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/magic-link?token=${token}`
     };
   }
 
   async validateMagicLink(token) {
-    const magicLinkToken = await db.findMagicLinkToken(token);
+    try {
+      const magicLinkToken = await db.findMagicLinkToken(token);
 
-    if (!magicLinkToken) {
-      throw new Error('Invalid magic link token');
+      if (!magicLinkToken) {
+        return {
+          isValid: false,
+          reason: 'Invalid magic link token'
+        };
+      }
+
+      if (magicLinkToken.used) {
+        return {
+          isValid: false,
+          reason: 'Token already used'
+        };
+      }
+
+      if (new Date() > magicLinkToken.expiresAt) {
+        return {
+          isValid: false,
+          reason: 'Token expired'
+        };
+      }
+
+      if (!magicLinkToken.user.isActive) {
+        return {
+          isValid: false,
+          reason: 'User account is inactive'
+        };
+      }
+
+      if (magicLinkToken.user.lockedUntil && new Date() < magicLinkToken.user.lockedUntil) {
+        return {
+          isValid: false,
+          reason: 'User account is locked'
+        };
+      }
+
+      // Mark token as used
+      await db.useMagicLinkToken(magicLinkToken.id);
+
+      return {
+        isValid: true,
+        user: magicLinkToken.user
+      };
+    } catch (error) {
+      return {
+        isValid: false,
+        reason: error.message
+      };
     }
-
-    if (magicLinkToken.used) {
-      throw new Error('Magic link already used');
-    }
-
-    if (new Date() > magicLinkToken.expiresAt) {
-      throw new Error('Magic link expired');
-    }
-
-    if (!magicLinkToken.user.isActive) {
-      throw new Error('User account is inactive');
-    }
-
-    // Mark token as used
-    await db.useMagicLinkToken(magicLinkToken.id);
-
-    return magicLinkToken.user;
   }
 
   // Authentication flow
@@ -169,7 +312,7 @@ class AuthService {
       sessionId
     });
 
-    const refreshToken = this.generateRefreshToken();
+    const refreshToken = this.generateRefreshTokenCrypto();
     const refreshExpiresAt = new Date(Date.now() + this.parseTokenExpiry(this.refreshTokenExpiry));
 
     // Store refresh token

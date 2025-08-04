@@ -2,10 +2,13 @@ const request = require('supertest');
 const app = require('../../src/index');
 
 describe('Service Endpoints', () => {
-  describe('GET /auth/health', () => {
+  // Set timeout for all tests in this suite
+  jest.setTimeout(5000);
+
+  describe('GET /health', () => {
     it('should return health status', async () => {
       const response = await request(app)
-        .get('/auth/health')
+        .get('/health')
         .expect('Content-Type', /json/);
 
       expect(response.body).toHaveProperty('status');
@@ -23,7 +26,7 @@ describe('Service Endpoints', () => {
     it('should return 200 when service is healthy', async () => {
       // This test might fail if database is not connected, but that's expected
       const response = await request(app)
-        .get('/auth/health');
+        .get('/health');
 
       if (response.body.status === 'UP') {
         expect(response.status).toBe(200);
@@ -34,17 +37,17 @@ describe('Service Endpoints', () => {
 
     it('should return proper database information', async () => {
       const response = await request(app)
-        .get('/auth/health');
+        .get('/health');
 
       expect(response.body.database).toBeDefined();
       expect(typeof response.body.database).toBe('object');
     });
   });
 
-  describe('GET /auth/info', () => {
+  describe('GET /info', () => {
     it('should return comprehensive service information', async () => {
       const response = await request(app)
-        .get('/auth/info')
+        .get('/info')
         .expect(200)
         .expect('Content-Type', /json/);
 
@@ -89,7 +92,7 @@ describe('Service Endpoints', () => {
 
     it('should sanitize database URL credentials', async () => {
       const response = await request(app)
-        .get('/auth/info')
+        .get('/info')
         .expect(200);
 
       if (response.body.database.url.includes('://')) {
@@ -100,7 +103,7 @@ describe('Service Endpoints', () => {
 
     it('should include correct database type from connection string', async () => {
       const response = await request(app)
-        .get('/auth/info')
+        .get('/info')
         .expect(200);
 
       if (process.env.DATABASE_URL) {
@@ -111,7 +114,7 @@ describe('Service Endpoints', () => {
 
     it('should show session provider based on Redis URL configuration', async () => {
       const response = await request(app)
-        .get('/auth/info')
+        .get('/info')
         .expect(200);
 
       if (process.env.REDIS_URL) {
@@ -122,10 +125,10 @@ describe('Service Endpoints', () => {
     });
   });
 
-  describe('GET /auth/validate', () => {
+  describe('GET /validate', () => {
     it('should require Authorization header', async () => {
       const response = await request(app)
-        .get('/auth/validate')
+        .get('/validate')
         .expect(401)
         .expect('Content-Type', /json/);
 
@@ -136,7 +139,7 @@ describe('Service Endpoints', () => {
 
     it('should require Bearer token format', async () => {
       const response = await request(app)
-        .get('/auth/validate')
+        .get('/validate')
         .set('Authorization', 'InvalidFormat token123')
         .expect(401);
 
@@ -145,7 +148,7 @@ describe('Service Endpoints', () => {
 
     it('should validate token format in Authorization header', async () => {
       const response = await request(app)
-        .get('/auth/validate')
+        .get('/validate')
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
 

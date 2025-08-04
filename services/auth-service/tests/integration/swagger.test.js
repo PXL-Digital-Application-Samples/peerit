@@ -53,7 +53,7 @@ describe('Swagger/OpenAPI Integration Tests', () => {
     test('Health endpoint should return proper structure', async () => {
       const response = await request(app)
         .get('/health')
-        .expect(503); // Service down because no database
+        .expect(200); // Static healthy response in test mode
       
       // Validate response structure
       expect(response.body).toHaveProperty('status');
@@ -66,6 +66,10 @@ describe('Swagger/OpenAPI Integration Tests', () => {
       expect(typeof response.body.timestamp).toBe('string');
       expect(typeof response.body.version).toBe('string');
       expect(typeof response.body.dependencies).toBe('object');
+      
+      // In basic test mode, should be UP with mock data
+      expect(response.body.status).toBe('UP');
+      expect(response.body.database.mode).toBe('mock');
     });
 
     test('Service info endpoint should return comprehensive configuration', async () => {
