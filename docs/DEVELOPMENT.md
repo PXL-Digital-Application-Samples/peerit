@@ -2,32 +2,115 @@
 
 ## Quick Start
 
-1. **Prerequisites**
-   - Docker and Docker Compose
-   - Node.js 18+ (for currently implemented services)
-   - PostgreSQL client (optional, for direct DB access)
+### Prerequisites
+- Docker Desktop (includes Docker Compose)
+- That's it! No Node.js required for Docker development.
 
-2. **Setup**
-   ```bash
-   # Clone the repository
-   git clone https://github.com/your-org/peerit.git
-   cd peerit
-   
-   # Run setup script
-   npm run setup
-   # or on Windows:
-   powershell -ExecutionPolicy Bypass -File tools/setup.ps1
-   ```
+### Start Development Environment
+```bash
+# Clone the repository
+git clone <repository-url>
+cd peerit
 
-3. **Start Development Environment**
-   ```bash
-   npm run docker:up
-   ```
+# Start everything (Docker handles setup)
+docker compose up
 
-4. **Access the Application**
-   - Frontend: http://localhost:3000
-   - API Gateway: http://localhost:80
-   - Individual services: http://localhost:30XX (where XX is service port)
+# Access the application:
+# Frontend: http://localhost:3000
+# API Gateway: http://localhost:80
+# BFF: http://localhost:3001
+```
+
+> **Note**: First startup takes longer as Docker downloads images and builds services.
+
+## Docker Compose Workflows
+
+### Development Commands
+
+```bash
+# Start everything
+docker compose up
+
+# Start in background
+docker compose up -d
+
+# Start only infrastructure (PostgreSQL + Redis)
+docker compose up postgres redis -d
+
+# Start specific services
+docker compose up frontend bff api-gateway
+
+# View logs
+docker compose logs -f
+
+# Stop everything
+docker compose down
+
+# Clean slate (removes all data)
+docker compose down -v
+```
+
+### Individual Service Development
+
+```bash
+# Start infrastructure
+docker compose up postgres redis -d
+
+# Work on auth service
+cd services/auth-service
+docker compose up
+# OR for local development:
+npm install && npm run dev
+
+# Work on frontend  
+cd apps/frontend
+npm install && npm run dev
+```
+
+### Admin Tools
+
+```bash
+# Start with admin tools
+docker compose --profile tools up
+
+# Access tools:
+# PostgreSQL Admin: http://localhost:5050 (admin@peerit.dev / admin)
+# Redis Commander: http://localhost:8081
+```
+
+## Service Architecture
+
+### Database Isolation
+
+Each service has its own database within the shared PostgreSQL instance:
+
+- `peerit_auth` - Authentication service
+- `peerit_users` - User management service
+- `peerit_teams` - Team management service
+- `peerit_rubrics` - Rubric management service
+- `peerit_reviews` - Review submission service
+- `peerit_reports` - Report generation service
+- `peerit_email` - Email service
+- `peerit_orchestrator` - Workflow orchestration
+
+### Redis Database Separation
+
+Services use different Redis databases for isolation:
+
+- **DB 0**: Auth service (sessions, tokens)
+- **DB 1**: Orchestrator (workflows, queues)
+- **DB 2**: BFF (response caching)
+- **DB 3**: Review service (temporary data)
+
+### Network Communication
+
+All services communicate through the `peerit-network` Docker network using service names:
+
+```javascript
+// Service-to-service communication
+const authResponse = await fetch('http://auth-service:3020/validate');
+const userData = await fetch('http://user-service:3021/users/123');
+```
 
 ## Service Development
 

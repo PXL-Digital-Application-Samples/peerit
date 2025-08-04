@@ -120,7 +120,7 @@ npm install && npm run dev
 - **Networks**: All services communicate via `peerit-network`
 - **Volumes**: Persistent storage for data and uploads
 
-See [docs/DOCKER-COMPOSE.md](docs/DOCKER-COMPOSE.md) for detailed Docker usage instructions.
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for detailed development workflows and Docker usage.
 
 ## Deployment
 
@@ -146,10 +146,10 @@ See `infra/` directory for deployment configurations and Kubernetes manifests.
 
 ## Documentation
 
-- [Docker Compose Guide](docs/DOCKER-COMPOSE.md) - Local development with Docker
-- [Development Guide](docs/DEVELOPMENT.md) - General development workflow
-- [Migration Guide](docs/MIGRATION.md) - Language migration instructions
-- [API Documentation](docs/API.md) - Service API contracts
+- **[Development Guide](docs/DEVELOPMENT.md)** - Complete development workflow, Docker usage, and service architecture
+- **[Migration Guide](docs/MIGRATION.md)** - Language migration instructions for services
+
+> Each service has its own README.md with service-specific details.
 
 ## Service Architecture
 
