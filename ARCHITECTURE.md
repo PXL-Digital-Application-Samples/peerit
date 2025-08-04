@@ -53,7 +53,7 @@ flowchart TB
     end
 
     subgraph Infrastructure
-        APIGW[API Gateway (Caddy)]
+        APIGW["API Gateway - Caddy"]
         ORCH[Orchestrator]
     end
 
@@ -69,7 +69,7 @@ flowchart TB
 
     subgraph External
         SMTP[Email Server]
-        DB[(PostgreSQL / MySQL)]
+        DB["PostgreSQL / MySQL"]
     end
 
     FE --> APIGW
