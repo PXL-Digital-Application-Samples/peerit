@@ -3,15 +3,13 @@
 ## Quick Start
 
 ### Prerequisites
+
 - Docker Desktop (includes Docker Compose)
 - That's it! No Node.js required for Docker development.
 
 ### Start Development Environment
-```bash
-# Clone the repository
-git clone <repository-url>
-cd peerit
 
+```bash
 # Start everything (Docker handles setup)
 docker compose up
 
@@ -134,10 +132,12 @@ npm run build
 Services can be migrated to any language. See `docs/MIGRATION.md` for detailed guidance.
 
 ### Current Status
+
 - **Node.js/JavaScript**: All services (initial implementation)
 - **Migration Ready**: Services are designed to be language-agnostic
 
 ### Migration Example
+
 ```bash
 # Migrate auth-service to Go
 cd services/auth-service
@@ -191,14 +191,14 @@ curl http://localhost:3020/health
 3. **Service Dependencies**: Some services depend on others (see compose.yml)
 
 ### Clean Reset
+
 ```bash
 # Stop everything and clean up
-npm run docker:down
+docker compose down -v
 docker system prune -f
-npm run clean
 
 # Start fresh
-npm run setup
+docker compose up
 ```
 
 ## Architecture Benefits

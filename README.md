@@ -9,13 +9,16 @@ This is a language-agnostic monorepo containing independent, separately deployab
 ## Services
 
 ### Frontend
+
 - **apps/frontend**: Reactive SPA (Vue.js)
 
 ### API Layer
+
 - **apps/api-gateway**: Caddy configuration and routing
 - **apps/bff**: Backend-for-Frontend service
 
 ### Core Services
+
 - **services/orchestrator**: Workflow coordination service
 - **services/auth-service**: Authentication and session management
 - **services/user-service**: User and role management
@@ -26,6 +29,7 @@ This is a language-agnostic monorepo containing independent, separately deployab
 - **services/email-service**: Email notifications and reminders
 
 ### Infrastructure
+
 - **infra/docker**: Docker configurations
 
 ## Development
