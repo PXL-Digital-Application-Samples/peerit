@@ -119,6 +119,34 @@ class DatabaseService {
     return health;
   }
 
+  async getSessionHealth() {
+    const health = {
+      connected: false,
+      mode: 'offline'
+    };
+
+    if (this.redis && this.redis.isOpen) {
+      try {
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Redis timeout')), 2000)
+        );
+        const pingPromise = this.redis.ping();
+        
+        await Promise.race([pingPromise, timeoutPromise]);
+        health.connected = true;
+        health.mode = 'redis';
+      } catch (error) {
+        health.connected = false;
+        health.mode = 'redis_error';
+      }
+    } else if (this.isDevelopment) {
+      health.connected = true;
+      health.mode = 'memory';
+    }
+
+    return health;
+  }
+
   async disconnect() {
     if (this.prisma) {
       await this.prisma.$disconnect();

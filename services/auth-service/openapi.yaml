@@ -377,6 +377,7 @@ paths:
 
   /auth/health:
     get:
+      operationId: getHealthStatus
       summary: Health check endpoint
       description: Returns service health status and basic information
       tags: [Monitoring]
@@ -390,8 +391,8 @@ paths:
                 properties:
                   status:
                     type: string
-                    example: healthy
-                    enum: [healthy, unhealthy]
+                    example: UP
+                    enum: [UP, DOWN]
                   timestamp:
                     type: string
                     format: date-time
@@ -401,17 +402,24 @@ paths:
                     example: "1.0.0"
                   uptime:
                     type: number
-                    example: 3600
+                    example: 3600.5
                     description: Uptime in seconds
-                  dependencies:
+                  database:
                     type: object
                     properties:
-                      database:
+                      status:
                         type: string
-                        example: "connected"
-                      redis:
+                        example: UP
+                        enum: [UP, DOWN, UNKNOWN]
+                      type:
                         type: string
-                        example: "connected"
+                        example: "postgresql"
+        '500':
+          description: Internal server error during health check
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '503':
           description: Service unhealthy
           content:
@@ -421,17 +429,115 @@ paths:
                 properties:
                   status:
                     type: string
-                    example: unhealthy
+                    example: DOWN
                   timestamp:
                     type: string
                     format: date-time
-                  errors:
-                    type: array
-                    items:
-                      type: string
+                  error:
+                    type: string
+
+  /auth/info:
+    get:
+      operationId: getServiceInfo
+      summary: Service information endpoint
+      description: Returns configuration and environment information about the authentication service
+      tags: [Monitoring]
+      responses:
+        '200':
+          description: Service information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: "auth-service"
+                      version:
+                        type: string
+                        example: "1.0.0"
+                      description:
+                        type: string
+                        example: "Authentication and authorization service for Peerit platform"
+                  environment:
+                    type: object
+                    properties:
+                      nodeVersion:
+                        type: string
+                        example: "v18.19.0"
+                      environment:
+                        type: string
+                        example: "development"
+                      port:
+                        type: integer
+                        example: 3020
+                  database:
+                    type: object
+                    properties:
+                      provider:
+                        type: string
+                        example: "prisma"
+                      type:
+                        type: string
+                        example: "postgresql"
+                      url:
+                        type: string
+                        example: "postgresql://***:***@localhost:5432/peerit_auth"
+                      connected:
+                        type: boolean
+                        example: true
+                      mode:
+                        type: string
+                        enum: [connected, mock, offline]
+                        example: "connected"
+                  sessions:
+                    type: object
+                    properties:
+                      provider:
+                        type: string
+                        example: "redis"
+                      connected:
+                        type: boolean
+                        example: true
+                      mode:
+                        type: string
+                        enum: [redis, memory, offline]
+                        example: "redis"
+                  features:
+                    type: object
+                    properties:
+                      magicLinks:
+                        type: boolean
+                        example: true
+                      jwtRefresh:
+                        type: boolean
+                        example: true
+                      rateLimiting:
+                        type: boolean
+                        example: true
+                  build:
+                    type: object
+                    properties:
+                      timestamp:
+                        type: string
+                        format: date-time
+                        example: "2024-01-15T10:30:45.123Z"
+                      commit:
+                        type: string
+                        example: "abc123def"
+        '500':
+          description: Error retrieving service information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/docs:
     get:
+      operationId: getApiDocumentation
       summary: API documentation
       description: Swagger UI for interactive API documentation
       tags: [Monitoring]
@@ -442,6 +548,12 @@ paths:
             text/html:
               schema:
                 type: string
+        '404':
+          description: Documentation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
