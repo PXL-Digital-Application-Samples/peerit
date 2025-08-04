@@ -40,9 +40,12 @@ docker compose -f compose.test.yml up --build --abort-on-container-exit
 docker compose -f compose.test.yml down --volumes
 ```
 
+> **Note**: Option A (manual approach) is recommended as it's more reliable. Option B may have issues with test file copying in the Docker build context.
+
 **Test Results**: ✅ ALL TESTS WORKING
 
 **Integration test coverage includes:**
+
 - All authentication endpoints (login, magic links, token validation, logout)
 - Password management workflows (reset request/completion)
 - Express Actuator monitoring endpoints
@@ -62,9 +65,9 @@ npm install
 npm test
 
 # 2. Integration tests (requires Docker Compose)
-docker compose -f infra/docker/compose.yml up -d
+docker compose -f compose.test.yml up postgres-test redis-test -d
 npm run test:integration
-docker compose -f infra/docker/compose.yml down
+docker compose -f compose.test.yml down --volumes
 
 # 3. Development mode
 npm run dev
