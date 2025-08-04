@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js",
-    "test": "jest",
+    "dev": "echo 'Service not implemented yet'",
+    "start": "echo 'Service not implemented yet'",
+    "test": "echo 'No tests yet'",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "eslint src/**/*.js",
+    "lint": "echo 'No source code to lint yet'",
     "lint:fix": "eslint src/**/*.js --fix"
   },
   "dependencies": {

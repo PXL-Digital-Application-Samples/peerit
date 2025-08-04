@@ -3,10 +3,10 @@
   "version": "1.0.0", 
   "private": true,
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js",
-    "test": "jest",
-    "lint": "eslint src/**/*.js",
+    "dev": "echo 'Service not implemented yet'",
+    "start": "echo 'Service not implemented yet'",
+    "test": "echo 'No tests yet'",
+    "lint": "echo 'No source code to lint yet'",
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {

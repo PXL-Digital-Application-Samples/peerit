@@ -27,12 +27,10 @@ This is a language-agnostic monorepo containing independent, separately deployab
 
 ### Infrastructure
 - **infra/docker**: Docker configurations
-- **infra/k8s**: Kubernetes manifests
-- **infra/database**: Database schemas and migrations
 
 ## Development
 
-Each service is completely independent and can be developed, tested, and deployed separately. See individual service README files for specific setup instructions.
+Each service is completely independent and can be developed, tested, and deployed separately. Services are currently defined with Docker configurations and package.json files, ready for implementation.
 
 ## Getting Started
 
@@ -46,10 +44,6 @@ Each service is completely independent and can be developed, tested, and deploye
 ### Quick Start
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd peerit
-
 # Start everything (Docker will handle the setup)
 docker compose up
 
@@ -142,14 +136,13 @@ Services can be deployed independently using Docker containers. Each service inc
 - Environment-based configuration
 - Language-agnostic interfaces for easy migration
 
-See `infra/` directory for deployment configurations and Kubernetes manifests.
+See `infra/docker/` directory for Docker configurations.
 
 ## Documentation
 
 - **[Development Guide](docs/DEVELOPMENT.md)** - Complete development workflow, Docker usage, and service architecture
-- **[Migration Guide](docs/MIGRATION.md)** - Language migration instructions for services
 
-> Each service has its own README.md with service-specific details.
+> Services include .env.example files for local configuration and Docker compose files for isolated development.
 
 ## Service Architecture
 

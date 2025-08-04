@@ -188,7 +188,7 @@ curl http://localhost:3020/health
 
 1. **Port Conflicts**: Ensure ports 3000-3030 are available
 2. **Database Connection**: Check PostgreSQL is running in Docker
-3. **Service Dependencies**: Some services depend on others (see docker-compose.yml)
+3. **Service Dependencies**: Some services depend on others (see compose.yml)
 
 ### Clean Reset
 ```bash
