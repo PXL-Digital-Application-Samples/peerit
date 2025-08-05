@@ -1,0 +1,757 @@
+{
+  "info": {
+    "name": "Peerit Keycloak Tests",
+    "description": "Declarative API tests for Keycloak infrastructure supporting the Peerit platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "realm",
+      "value": "peerit",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminUsername",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "teacherUsername",
+      "value": "teacher1",
+      "type": "string"
+    },
+    {
+      "key": "teacherPassword",
+      "value": "Teacher123",
+      "type": "string"
+    },
+    {
+      "key": "studentUsername",
+      "value": "student1",
+      "type": "string"
+    },
+    {
+      "key": "studentPassword",
+      "value": "Student123",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Infrastructure Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Health endpoint is accessible', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains status', () => {",
+                  "    const response = pm.response.text();",
+                  "    pm.expect(response).to.include('UP');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ready Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ready endpoint confirms Keycloak is ready', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Ready response contains UP status', () => {",
+                  "    const response = pm.response.text();",
+                  "    pm.expect(response).to.include('UP');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Metrics Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Metrics endpoint is accessible', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Metrics contain Keycloak data', () => {",
+                  "    const response = pm.response.text();",
+                  "    pm.expect(response).to.include('keycloak');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Peerit Realm Configuration",
+      "item": [
+        {
+          "name": "Peerit Realm OIDC Configuration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/.well-known/openid_configuration",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "{{realm}}", ".well-known", "openid_configuration"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Peerit realm OIDC configuration is accessible', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Configuration contains required endpoints', () => {",
+                  "    const config = pm.response.json();",
+                  "    pm.expect(config).to.have.property('issuer');",
+                  "    pm.expect(config).to.have.property('authorization_endpoint');",
+                  "    pm.expect(config).to.have.property('token_endpoint');",
+                  "    pm.expect(config).to.have.property('userinfo_endpoint');",
+                  "    pm.expect(config).to.have.property('jwks_uri');",
+                  "});",
+                  "",
+                  "pm.test('Realm name is correct', () => {",
+                  "    const config = pm.response.json();",
+                  "    pm.expect(config.issuer).to.include('/realms/peerit');",
+                  "});",
+                  "",
+                  "pm.test('Supports required grant types', () => {",
+                  "    const config = pm.response.json();",
+                  "    pm.expect(config.grant_types_supported).to.include('authorization_code');",
+                  "    pm.expect(config.grant_types_supported).to.include('refresh_token');",
+                  "});",
+                  "",
+                  "// Store endpoints for later use",
+                  "const config = pm.response.json();",
+                  "pm.collectionVariables.set('tokenEndpoint', config.token_endpoint);",
+                  "pm.collectionVariables.set('jwksUri', config.jwks_uri);",
+                  "pm.collectionVariables.set('userinfoEndpoint', config.userinfo_endpoint);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JWKS Keys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/certs",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "certs"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('JWKS endpoint is accessible', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('JWKS contains keys for token validation', () => {",
+                  "    const jwks = pm.response.json();",
+                  "    pm.expect(jwks).to.have.property('keys');",
+                  "    pm.expect(jwks.keys).to.be.an('array');",
+                  "    pm.expect(jwks.keys.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test('Keys have required properties', () => {",
+                  "    const jwks = pm.response.json();",
+                  "    const key = jwks.keys[0];",
+                  "    pm.expect(key).to.have.property('kty');",
+                  "    pm.expect(key).to.have.property('use');",
+                  "    pm.expect(key).to.have.property('kid');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Authentication Tests",
+      "item": [
+        {
+          "name": "Get Admin Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "admin-cli"
+                },
+                {
+                  "key": "username",
+                  "value": "{{adminUsername}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{adminPassword}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/realms/master/protocol/openid-connect/token",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "master", "protocol", "openid-connect", "token"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin authentication successful', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Token response contains access_token', () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('access_token');",
+                  "    pm.expect(response).to.have.property('token_type');",
+                  "    pm.expect(response.token_type).to.equal('Bearer');",
+                  "});",
+                  "",
+                  "// Store admin token for later use",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', response.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin User Login (Peerit Realm)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "admin-cli"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid"
+                },
+                {
+                  "key": "username",
+                  "value": "{{adminUsername}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{adminPassword}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin can login to Peerit realm', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Admin token contains required claims', () => {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('access_token');",
+                  "    ",
+                  "    // Decode JWT to check roles (basic decode, no verification)",
+                  "    const token = response.access_token;",
+                  "    const payload = JSON.parse(atob(token.split('.')[1]));",
+                  "    pm.expect(payload.realm_access.roles).to.include('admin');",
+                  "});",
+                  "",
+                  "// Store admin realm token",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('adminRealmToken', response.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Teacher User Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "admin-cli"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid"
+                },
+                {
+                  "key": "username",
+                  "value": "{{teacherUsername}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{teacherPassword}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Teacher can login to Peerit realm', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Teacher token contains teacher role', () => {",
+                  "    const response = pm.response.json();",
+                  "    const token = response.access_token;",
+                  "    const payload = JSON.parse(atob(token.split('.')[1]));",
+                  "    pm.expect(payload.realm_access.roles).to.include('teacher');",
+                  "});",
+                  "",
+                  "// Store teacher token",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('teacherToken', response.access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Student User Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "admin-cli"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid"
+                },
+                {
+                  "key": "username",
+                  "value": "{{studentUsername}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{studentPassword}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Student can login to Peerit realm', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Student token contains student role', () => {",
+                  "    const response = pm.response.json();",
+                  "    const token = response.access_token;",
+                  "    const payload = JSON.parse(atob(token.split('.')[1]));",
+                  "    pm.expect(payload.realm_access.roles).to.include('student');",
+                  "});",
+                  "",
+                  "// Store student token",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('studentToken', response.access_token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin API Tests",
+      "item": [
+        {
+          "name": "List Peerit Realm Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/realms/{{realm}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "realms", "{{realm}}", "users"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin can access Peerit realm users', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Users list contains expected test users', () => {",
+                  "    const users = pm.response.json();",
+                  "    pm.expect(users).to.be.an('array');",
+                  "    ",
+                  "    const usernames = users.map(user => user.username);",
+                  "    pm.expect(usernames).to.include('admin');",
+                  "    pm.expect(usernames).to.include('teacher1');",
+                  "    pm.expect(usernames).to.include('student1');",
+                  "});",
+                  "",
+                  "pm.test('Users have required properties', () => {",
+                  "    const users = pm.response.json();",
+                  "    const user = users[0];",
+                  "    pm.expect(user).to.have.property('id');",
+                  "    pm.expect(user).to.have.property('username');",
+                  "    pm.expect(user).to.have.property('enabled');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Peerit Realm Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/realms/{{realm}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "realms", "{{realm}}", "roles"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin can access Peerit realm roles', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Roles list contains Peerit-specific roles', () => {",
+                  "    const roles = pm.response.json();",
+                  "    pm.expect(roles).to.be.an('array');",
+                  "    ",
+                  "    const roleNames = roles.map(role => role.name);",
+                  "    pm.expect(roleNames).to.include('admin');",
+                  "    pm.expect(roleNames).to.include('teacher');",
+                  "    pm.expect(roleNames).to.include('student');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Peerit Realm Clients",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/realms/{{realm}}/clients",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "realms", "{{realm}}", "clients"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin can access Peerit realm clients', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Clients list contains Peerit applications', () => {",
+                  "    const clients = pm.response.json();",
+                  "    pm.expect(clients).to.be.an('array');",
+                  "    ",
+                  "    const clientIds = clients.map(client => client.clientId);",
+                  "    pm.expect(clientIds).to.include('peerit-frontend');",
+                  "    pm.expect(clientIds).to.include('peerit-api');",
+                  "    pm.expect(clientIds).to.include('peerit-services');",
+                  "});",
+                  "",
+                  "pm.test('Clients have proper configuration', () => {",
+                  "    const clients = pm.response.json();",
+                  "    const frontend = clients.find(c => c.clientId === 'peerit-frontend');",
+                  "    const api = clients.find(c => c.clientId === 'peerit-api');",
+                  "    ",
+                  "    // Frontend should be public (SPA)",
+                  "    pm.expect(frontend.publicClient).to.be.true;",
+                  "    ",
+                  "    // API should be confidential",
+                  "    pm.expect(api.publicClient).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Token Validation Tests",
+      "item": [
+        {
+          "name": "User Info with Admin Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminRealmToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "userinfo"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User info endpoint works with admin token', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User info contains expected admin data', () => {",
+                  "    const userInfo = pm.response.json();",
+                  "    pm.expect(userInfo).to.have.property('sub');",
+                  "    pm.expect(userInfo).to.have.property('preferred_username');",
+                  "    pm.expect(userInfo.preferred_username).to.equal('admin');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User Info with Teacher Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "userinfo"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User info endpoint works with teacher token', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User info contains expected teacher data', () => {",
+                  "    const userInfo = pm.response.json();",
+                  "    pm.expect(userInfo.preferred_username).to.equal('teacher1');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User Info with Student Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo",
+              "host": ["{{baseUrl}}"],
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "userinfo"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User info endpoint works with student token', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User info contains expected student data', () => {",
+                  "    const userInfo = pm.response.json();",
+                  "    pm.expect(userInfo.preferred_username).to.equal('student1');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

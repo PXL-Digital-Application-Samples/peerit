@@ -37,7 +37,7 @@
   "accessCodeLifespanLogin": 1800,
   "actionTokenGeneratedByAdminLifespan": 43200,
   "actionTokenGeneratedByUserLifespan": 300,
-  "passwordPolicy": "length(8) and digits(1) and lowerCase(1) and upperCase(1) and notUsername",
+  "passwordPolicy": "",
   "attributes": {
     "frontendUrl": "http://localhost:8080",
     "_browser_header.contentSecurityPolicyReportOnly": "",
@@ -203,7 +203,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin123",
+          "value": "Admin123",
           "temporary": false
         }
       ],
@@ -224,7 +224,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "teacher123",
+          "value": "Teacher123",
           "temporary": false
         }
       ],
@@ -245,7 +245,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "student123",
+          "value": "Student123",
           "temporary": false
         }
       ],
@@ -266,7 +266,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "student123",
+          "value": "Student123",
           "temporary": false
         }
       ],
@@ -287,7 +287,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "student123",
+          "value": "Student123",
           "temporary": false
         }
       ],

@@ -1,0 +1,72 @@
+# Keycloak Test Suite
+# Declarative testing with health checks and validation
+
+version: '3.8'
+
+services:
+  # Test database
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keycloak_test
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak under test
+  keycloak-test:
+    image: quay.io/keycloak/keycloak:25.0.6
+    command: start-dev --import-realm
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-test:5432/keycloak_test
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_LOG_LEVEL: INFO
+    volumes:
+      - ../realm-config/peerit-realm.json:/opt/keycloak/data/import/peerit-realm.json:ro
+      - ../themes:/opt/keycloak/themes:ro
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  # Test runner
+  test-runner:
+    image: node:18-alpine
+    depends_on:
+      keycloak-test:
+        condition: service_healthy
+    working_dir: /tests
+    volumes:
+      - ./tests:/tests:ro
+      - ./results:/tests/results
+    environment:
+      KEYCLOAK_URL: http://keycloak-test:8080
+      TEST_TIMEOUT: 30000
+    command: >
+      sh -c "
+        npm install &&
+        npm test &&
+        echo 'All tests passed!' > /tests/results/test-results.txt
+      "
+
+volumes:
+  postgres_test_data:
