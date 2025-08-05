@@ -29,8 +29,12 @@ RUN chmod +x /opt/keycloak/scripts/*.sh
 RUN chown -R keycloak:keycloak /opt/keycloak/data/import/ /opt/keycloak/themes/ /opt/keycloak/scripts/
 RUN chmod -R 755 /opt/keycloak/data/import/ /opt/keycloak/themes/
 
-# Switch back to keycloak user
+# Build Keycloak with PostgreSQL support
 USER keycloak
+RUN /opt/keycloak/bin/kc.sh build --db=postgres --health-enabled=true --metrics-enabled=true
+
+# Switch back to root for final configuration
+USER root
 
 # Default environment variables (can be overridden)
 ENV KC_HEALTH_ENABLED=true
@@ -46,6 +50,9 @@ ENV KC_DB=postgres
 
 # Admin configuration (must be provided via environment at runtime)
 # KC_BOOTSTRAP_ADMIN_USERNAME and KC_BOOTSTRAP_ADMIN_PASSWORD must be set
+
+# Switch back to keycloak user for runtime
+USER keycloak
 
 # Expose port
 EXPOSE 8080
