@@ -1,0 +1,68 @@
+# Multi-stage Dockerfile with integrated testing (Option A)
+# Tests run during build - only proceeds to production if tests pass
+
+# Stage 1: Dependencies and testing
+FROM node:22-alpine AS test
+
+# Install test dependencies
+RUN apk add --no-cache dumb-init
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies (including dev dependencies)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client for tests
+RUN npx prisma generate
+
+# Run basic tests (fast, no infrastructure needed)
+RUN npm run test:basic
+
+# Stage 2: Production build (only if tests pass)
+FROM node:22-alpine AS production
+
+# Set environment for production optimizations
+ENV NODE_ENV=production
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S service -u 1001 -G nodejs
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+WORKDIR /app
+
+# Copy package files and install only production dependencies
+COPY package*.json ./
+RUN npm install --only=production && npm cache clean --force
+
+# Copy application code (exclude test files)
+COPY --chown=service:nodejs src ./src
+COPY --chown=service:nodejs prisma ./prisma
+COPY --chown=service:nodejs openapi.yaml ./
+
+# Generate Prisma client for production
+RUN npx prisma generate
+
+# Switch to non-root user
+USER service
+
+# Expose port
+EXPOSE 3020
+
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3020/health || exit 1
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Start the application
+CMD ["node", "src/index.js"]
