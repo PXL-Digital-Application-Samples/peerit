@@ -126,13 +126,13 @@
       ],
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "authorizationServicesEnabled": false,
       "fullScopeAllowed": true,
       "defaultClientScopes": [
         "web-origins",
-        "acr", 
+        "acr",
         "profile",
         "roles",
         "email"
@@ -141,7 +141,9 @@
         "address",
         "phone",
         "offline_access",
-        "microprofile-jwt"
+        "microprofile-jwt",
+        "roles",
+        "profile"
       ]
     },
     {
