@@ -1,0 +1,72 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: keycloak
+    hostname: keycloak
+    env_file:
+      - ./keycloak/.env.example
+    environment:
+      # Database Configuration
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      
+      # Development Configuration
+      KC_HOSTNAME: localhost
+      KC_HTTP_PORT: 8080
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      
+      # Logging
+      KC_LOG_LEVEL: INFO
+      
+    ports:
+      - "8080:8080"
+    volumes:
+      # Realm configuration for import
+      - ./keycloak/realm-config:/opt/keycloak/data/import:ro
+      # Custom themes
+      - ./keycloak/themes:/opt/keycloak/themes:ro
+    command: 
+      - start-dev
+      - --import-realm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - peerit-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-keycloak
+    env_file:
+      - ./keycloak/.env.example
+    environment:
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    networks:
+      - peerit-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  keycloak-postgres-data:
+    driver: local
+
+networks:
+  peerit-network:
+    external: true

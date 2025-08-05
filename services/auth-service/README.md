@@ -37,7 +37,7 @@ docker run -d -p 3020:3020 -e JWT_SECRET=your-secret peerit-auth-service
 - **Live API Documentation**: <http://localhost:3020/docs>
 - **OpenAPI 3.1 Specification**: [openapi.yaml](./openapi.yaml)
 
-Interactive browser-based API testing with complete endpoint documentation, request/response schemas, and authentication flow examples. The OpenAPI specification can be imported into Postman, Insomnia, or used for code generation.
+Interactive browser-based API testing with complete endpoint documentation, request/response schemas, and authentication flow examples.
 
 ### Health & Monitoring
 
@@ -49,10 +49,10 @@ Interactive browser-based API testing with complete endpoint documentation, requ
 ## Testing
 
 ```bash
-# Unit tests (43 tests) - 4 seconds, no infrastructure
+# Unit tests - no infrastructure
 npm test
 
-# Integration tests (14 tests) - requires Docker
+# Integration tests - requires Docker
 docker compose -f compose.test.yml up postgres-test redis-test -d
 npm run test:integration
 docker compose -f compose.test.yml down --volumes

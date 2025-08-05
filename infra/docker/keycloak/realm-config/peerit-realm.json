@@ -1,0 +1,345 @@
+{
+  "realm": "peerit",
+  "displayName": "Peerit - Anonymous Peer Evaluation Platform",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>Peerit</span></div>",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "defaultSignatureAlgorithm": "RS256",
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "ssoSessionIdleTimeoutRememberMe": 86400,
+  "ssoSessionMaxLifespanRememberMe": 2592000,
+  "offlineSessionIdleTimeout": 2592000,
+  "offlineSessionMaxLifespanEnabled": false,
+  "offlineSessionMaxLifespan": 5184000,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
+  "actionTokenGeneratedByAdminLifespan": 43200,
+  "actionTokenGeneratedByUserLifespan": 300,
+  "passwordPolicy": "length(8) and digits(1) and lowerCase(1) and upperCase(1) and notUsername",
+  "attributes": {
+    "frontendUrl": "http://localhost:8080",
+    "_browser_header.contentSecurityPolicyReportOnly": "",
+    "_browser_header.xContentTypeOptions": "nosniff",
+    "_browser_header.xRobotsTag": "none",
+    "_browser_header.xFrameOptions": "SAMEORIGIN",
+    "_browser_header.contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+    "_browser_header.xXSSProtection": "1; mode=block",
+    "_browser_header.strictTransportSecurity": "max-age=31536000; includeSubDomains"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Platform administrator with full access to all features",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "peerit"
+      },
+      {
+        "name": "teacher",
+        "description": "Course instructor who can create courses, manage teams, and view all reviews",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "peerit"
+      },
+      {
+        "name": "student",
+        "description": "Course participant who can join teams and submit peer reviews",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "peerit"
+      },
+      {
+        "name": "offline_access",
+        "description": "Allows offline access",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "peerit"
+      },
+      {
+        "name": "uma_authorization",
+        "description": "User-managed access authorization",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "peerit"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "Administrators",
+      "path": "/Administrators",
+      "realmRoles": ["admin"]
+    },
+    {
+      "name": "Teachers",
+      "path": "/Teachers", 
+      "realmRoles": ["teacher"]
+    },
+    {
+      "name": "Students",
+      "path": "/Students",
+      "realmRoles": ["student"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "peerit-frontend",
+      "name": "Peerit Frontend Application",
+      "description": "Vue.js SPA for the Peerit platform",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "publicClient": true,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000/*"
+      },
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr", 
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "peerit-api",
+      "name": "Peerit API Gateway",
+      "description": "API Gateway and Backend-for-Frontend service",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "peerit-api-secret-dev-only",
+      "publicClient": false,
+      "bearerOnly": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": true,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile", 
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "peerit-services", 
+      "name": "Peerit Microservices",
+      "description": "Backend microservices for token validation",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "peerit-services-secret-dev-only",
+      "publicClient": false,
+      "bearerOnly": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "fullScopeAllowed": true
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@peerit.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "offline_access", "uma_authorization"],
+      "groups": ["/Administrators"]
+    },
+    {
+      "username": "teacher1",
+      "email": "teacher1@peerit.local", 
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "department": ["Computer Science"],
+        "employeeId": ["T001"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "teacher123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["teacher", "offline_access", "uma_authorization"],
+      "groups": ["/Teachers"]
+    },
+    {
+      "username": "student1",
+      "email": "student1@peerit.local",
+      "firstName": "John", 
+      "lastName": "Doe",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "studentId": ["S001"],
+        "year": ["3"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "student123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["student", "offline_access", "uma_authorization"],
+      "groups": ["/Students"]
+    },
+    {
+      "username": "student2",
+      "email": "student2@peerit.local",
+      "firstName": "Sarah",
+      "lastName": "Johnson", 
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "studentId": ["S002"],
+        "year": ["3"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "student123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["student", "offline_access", "uma_authorization"],
+      "groups": ["/Students"]
+    },
+    {
+      "username": "student3",
+      "email": "student3@peerit.local",
+      "firstName": "Mike",
+      "lastName": "Wilson",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": {
+        "studentId": ["S003"],
+        "year": ["2"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "student123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["student", "offline_access", "uma_authorization"],
+      "groups": ["/Students"]
+    }
+  ],
+  "clientScopeMappings": {
+    "account": [
+      {
+        "client": "peerit-frontend",
+        "roles": ["view-profile", "manage-account"]
+      }
+    ]
+  },
+  "scopeMappings": [
+    {
+      "client": "peerit-api",
+      "roles": ["admin", "teacher", "student"]
+    },
+    {
+      "client": "peerit-services", 
+      "roles": ["admin", "teacher", "student"]
+    }
+  ],
+  "smtpServer": {
+    "port": "587",
+    "host": "localhost",
+    "fromDisplayName": "Peerit Platform",
+    "from": "noreply@peerit.local",
+    "auth": false,
+    "ssl": false,
+    "starttls": false
+  },
+  "eventsEnabled": true,
+  "eventsListeners": ["jboss-logging"],
+  "enabledEventTypes": [
+    "LOGIN",
+    "LOGIN_ERROR", 
+    "LOGOUT",
+    "REGISTER",
+    "REGISTER_ERROR",
+    "UPDATE_PASSWORD",
+    "UPDATE_PASSWORD_ERROR",
+    "UPDATE_PROFILE",
+    "UPDATE_PROFILE_ERROR",
+    "VERIFY_EMAIL",
+    "VERIFY_EMAIL_ERROR"
+  ],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en", "nl", "fr"],
+  "defaultLocale": "en"
+}
