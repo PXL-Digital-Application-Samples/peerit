@@ -14,11 +14,8 @@ LABEL org.opencontainers.image.source="https://github.com/PXL-Digital-Applicatio
 # Switch to root to install packages and setup
 USER root
 
-# Install additional tools for configuration and health checks
-# Keycloak latest uses UBI9 which has dnf instead of microdnf
-RUN dnf update -y && \
-    dnf install -y curl jq && \
-    dnf clean all
+# Note: Keycloak image is minimal and doesn't have package managers
+# We'll use the built-in health check capabilities instead
 
 # Copy realm configuration and themes
 COPY realm-config/ /opt/keycloak/data/import/
@@ -53,9 +50,9 @@ ENV KC_DB=postgres
 # Expose port
 EXPOSE 8080
 
-# Health check
+# Health check using built-in Keycloak health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s \
-    CMD curl -f http://localhost:8080/health/ready || exit 1
+    CMD bash -c "</dev/tcp/localhost/8080" || exit 1
 
 # Default entrypoint
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
