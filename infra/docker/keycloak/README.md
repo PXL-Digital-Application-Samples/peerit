@@ -108,12 +108,18 @@ volumes:
 
 ### GitHub Actions (Recommended)
 
+**One-Click Manual Build:**
 1. Go to Actions → "Build Peerit Keycloak Image" → "Run workflow"
-2. Set parameters:
-   - Keycloak Version: `latest`
-   - Image Tag: `v1.0.0` 
-   - Push to Registry: `true`
-3. Image available at: `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1.0.0`
+2. Click "Run workflow" (all defaults are pre-filled)
+3. Image available at: `ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest`
+
+**Automatic Release Build:**
+1. Create and push a version tag: `git tag v1.0.0 && git push origin v1.0.0`
+2. GitHub Actions automatically builds one image with multiple tags:
+   - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1.0.0`
+   - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1.0`
+   - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1`
+   - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest` (if main branch)
 
 ### Manual Build
 
@@ -161,7 +167,7 @@ curl http://localhost:8080/realms/peerit
 docker logs keycloak-test
 
 # Test with debug logging
-docker run -e KC_LOG_LEVEL=DEBUG peerit-keycloak
+docker run -e KC_LOG_LEVEL=DEBUG ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
 ```
 
 ## Files

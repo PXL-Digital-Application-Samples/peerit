@@ -1,6 +1,9 @@
 name: Build Peerit Keycloak Image
 
 on:
+  push:
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       keycloak_version:
@@ -10,12 +13,12 @@ on:
         type: string
       image_tag:
         description: 'Tag for the built image (e.g., v1.0.0, latest)'
-        required: true
+        required: false
         default: 'latest'
         type: string
       push_to_registry:
         description: 'Push image to GitHub Container Registry'
-        required: true
+        required: false
         default: true
         type: boolean
 
@@ -53,8 +56,17 @@ jobs:
           tags: |
             type=raw,value=${{ inputs.image_tag }}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=tag
             type=ref,event=branch
+            type=sha,prefix={{branch}}-
+          labels: |
+            org.opencontainers.image.title=Peerit Keycloak
+            org.opencontainers.image.description=Pre-configured Keycloak for Peerit platform
+            org.opencontainers.image.vendor=PXL Digital Application Samples
+            org.opencontainers.image.version=${{ inputs.image_tag }}
             
       - name: Build Keycloak image
         uses: docker/build-push-action@v5
@@ -62,8 +74,8 @@ jobs:
           context: ./infra/docker/keycloak
           file: ./infra/docker/keycloak/Dockerfile
           build-args: |
-            KEYCLOAK_VERSION=${{ inputs.keycloak_version }}
-          push: ${{ inputs.push_to_registry }}
+            KEYCLOAK_VERSION=${{ inputs.keycloak_version || 'latest' }}
+          push: ${{ inputs.push_to_registry || github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
@@ -75,10 +87,11 @@ jobs:
           echo "## Keycloak Image Built Successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Image Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Base Keycloak Version**: ${{ inputs.keycloak_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image Tag**: ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base Keycloak Version**: ${{ inputs.keycloak_version || 'latest' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: ${{ inputs.image_tag || github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Registry**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Pushed to Registry**: ${{ inputs.push_to_registry }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pushed to Registry**: ${{ inputs.push_to_registry || github.event_name == 'push' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Features Included" >> $GITHUB_STEP_SUMMARY
           echo "- Pre-configured Peerit realm" >> $GITHUB_STEP_SUMMARY
@@ -104,7 +117,7 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           
       - name: Test image (if not pushed)
-        if: ${{ !inputs.push_to_registry }}
+        if: ${{ !inputs.push_to_registry && github.event_name != 'push' }}
         run: |
           echo "Testing built image locally..."
           docker run --rm -d \
@@ -116,7 +129,7 @@ jobs:
             -e KC_DB_PASSWORD=testpass \
             -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
             -e KC_BOOTSTRAP_ADMIN_PASSWORD=testpass123 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag || 'latest' }}
           
           # Wait for startup
           sleep 60
