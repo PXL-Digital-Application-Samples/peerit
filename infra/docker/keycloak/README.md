@@ -108,12 +108,20 @@ volumes:
 
 ### GitHub Actions (Recommended)
 
+**Zero-Click Automatic Build:**
+
+- Just push changes to `infra/docker/keycloak/` on main branch
+- GitHub Actions automatically builds and pushes `latest` tag
+- No forms, no clicking, completely automatic
+
 **One-Click Manual Build:**
+
 1. Go to Actions → "Build Peerit Keycloak Image" → "Run workflow"
 2. Click "Run workflow" (all defaults are pre-filled)
 3. Image available at: `ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest`
 
 **Automatic Release Build:**
+
 1. Create and push a version tag: `git tag v1.0.0 && git push origin v1.0.0`
 2. GitHub Actions automatically builds one image with multiple tags:
    - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1.0.0`

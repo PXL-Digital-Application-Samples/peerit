@@ -2,8 +2,12 @@ name: Build Peerit Keycloak Image
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*.*.*'
+    paths:
+      - 'infra/docker/keycloak/**'
   workflow_dispatch:
     inputs:
       keycloak_version:
