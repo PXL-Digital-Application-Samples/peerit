@@ -67,16 +67,14 @@ KC_HTTP_PORT=8080
 KC_LOG_LEVEL=INFO
 KC_DB_SCHEMA=public
 KC_PROXY=edge
-KC_HEALTH_ENABLED=true
-KC_METRICS_ENABLED=true
 ```
 
 ## Features
 
 - **Pre-configured Peerit realm** with roles and clients
 - **Custom themes** for branding
-- **Health checks** at `/health/ready`, `/health/live`
-- **Metrics** at `/metrics`
+- **PostgreSQL database support** (v26+ optimized build)
+- **Optimized production build** with pre-compiled features
 - **Multi-platform** (AMD64/ARM64)
 - **Environment-configurable** for dev/prod
 
@@ -91,8 +89,11 @@ docker compose -f compose.test.yml up -d
 ## Troubleshooting
 
 ```bash
-# Check health
-curl http://localhost:8080/health/ready
+# Check if Keycloak is responding
+curl http://localhost:8080/realms/master
+
+# Test Peerit realm
+curl http://localhost:8080/realms/peerit
 
 # Check logs
 docker logs peerit-keycloak
@@ -103,8 +104,8 @@ docker run -e KC_LOG_LEVEL=DEBUG peerit-keycloak
 
 ## Files Created
 
-- `Dockerfile` - Multi-platform Keycloak image with Peerit configuration
+- `Dockerfile` - Multi-platform Keycloak image with PostgreSQL support
 - `compose.keycloak-prod.yml` - Production deployment with environment variables
 - `.env.prod` - Production environment template
 - `.github/workflows/build-keycloak.yml` - Automated image building
-- Updated test compose files to support pre-built image option
+- Updated test compose files to support PostgreSQL-enabled image
