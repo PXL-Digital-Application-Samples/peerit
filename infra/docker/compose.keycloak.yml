@@ -1,10 +1,8 @@
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:25.0
+    image: ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
     container_name: keycloak
     hostname: keycloak
-    env_file:
-      - ./keycloak/.env.example
     environment:
       # Database Configuration
       KC_DB: postgres
@@ -24,11 +22,7 @@ services:
       
     ports:
       - "8080:8080"
-    volumes:
-      # Realm configuration for import
-      - ./keycloak/realm-config:/opt/keycloak/data/import:ro
-      # Custom themes
-      - ./keycloak/themes:/opt/keycloak/themes:ro
+    # No volumes needed - realm config and themes are built into the image
     command: 
       - start-dev
       - --import-realm

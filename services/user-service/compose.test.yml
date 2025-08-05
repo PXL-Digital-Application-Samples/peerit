@@ -8,6 +8,7 @@ services:
       POSTGRES_PASSWORD: testpass
     ports:
       - "5433:5432"
+    command: postgres -c 'max_connections=100' -c 'shared_buffers=128MB'
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U testuser -d peerit_test"]
       interval: 5s
@@ -27,19 +28,18 @@ services:
 
   # Keycloak for integration testing
   keycloak-test:
-    # Use pre-built image or local Keycloak
-    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:latest}
+    # Use pre-built GitHub image with Peerit realm
+    image: ${KEYCLOAK_IMAGE:-ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest}
     environment:
       # Bootstrap admin configuration
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: Admin123
       
-      # Database Configuration - using same DB as user-service
+      # Database Configuration - using default postgres user with full privileges
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres-test:5432/peerit_test
       KC_DB_USERNAME: testuser
       KC_DB_PASSWORD: testpass
-      KC_DB_SCHEMA: keycloak
       
       # Enable health and metrics
       KC_HEALTH_ENABLED: "true"
@@ -48,12 +48,11 @@ services:
       
     ports:
       - "8180:8080"
-    volumes:
-      - ../../infra/docker/keycloak/realm-config:/opt/keycloak/data/import:ro
+    # No volumes needed - realm config and themes are built into the GitHub image
     depends_on:
       postgres-test:
         condition: service_healthy
-    entrypoint: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
+    command: ["start-dev", "--import-realm"]
     healthcheck:
       test: ["CMD", "bash", "-c", ">/dev/tcp/localhost/8080"]
       interval: 30s
