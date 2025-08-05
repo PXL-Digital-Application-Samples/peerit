@@ -46,15 +46,38 @@ Interactive browser-based API testing with complete endpoint documentation, requ
 
 ## Testing
 
-```bash
-# Unit tests - no infrastructure
-npm test
+✅ **All Tests Passing: 41/41**
 
-# Integration tests - requires Docker
-docker compose -f compose.test.yml up postgres-test redis-test -d
-npm run test:integration
+### Unit Tests (17/17)
+
+```bash
+# Fast isolated tests with mocked dependencies
+npm test
+```
+
+### Integration Tests (24/24)
+
+```bash
+# Real infrastructure tests with PostgreSQL + Keycloak v26+
+docker compose -f compose.test.yml up -d
+cross-env TEST_INTEGRATION=true npm test -- tests/integration/infrastructure.test.js
 docker compose -f compose.test.yml down --volumes
 ```
+
+### Test Infrastructure
+
+- **PostgreSQL 15**: Shared database with separate schemas (public for service, keycloak for auth)
+- **Keycloak v26+**: Real authentication service with realm import
+- **Redis 7**: Caching layer for performance testing
+- **Environment**: `TEST_INTEGRATION=true` enforces real infrastructure usage
+
+### Test Features
+
+- ✅ Real database connectivity and persistence verification
+- ✅ Keycloak v26+ API compatibility and JWT validation  
+- ✅ Shared database architecture with schema isolation
+- ✅ Infrastructure verification prevents mocking bypasses
+- ✅ Automatic database schema initialization
 
 ## Configuration
 

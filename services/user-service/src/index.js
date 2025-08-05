@@ -11,6 +11,9 @@ const path = require('path');
 // Load environment variables
 require('dotenv').config();
 
+// Import database service
+const { getDatabaseService } = require('./services/database');
+
 // Import routes
 const userProfileRoutes = require('./routes/userProfiles');
 const roleManagementRoutes = require('./routes/roleManagement');
@@ -111,12 +114,27 @@ app.use('*', (req, res) => {
 
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`🚀 User Service running on port ${PORT}`);
-    console.log(`📚 API Documentation: http://localhost:${PORT}/docs`);
-    console.log(`💚 Health Check: http://localhost:${PORT}/health`);
-    console.log(`ℹ️  Service Info: http://localhost:${PORT}/info`);
-  });
+  // Initialize database and start server
+  const startServer = async () => {
+    try {
+      // Initialize database service (auto-create schema if needed)
+      const databaseService = getDatabaseService();
+      await databaseService.initialize();
+      
+      // Start server after database is ready
+      app.listen(PORT, () => {
+        console.log(`🚀 User Service running on port ${PORT}`);
+        console.log(`📚 API Documentation: http://localhost:${PORT}/docs`);
+        console.log(`💚 Health Check: http://localhost:${PORT}/health`);
+        console.log(`ℹ️  Service Info: http://localhost:${PORT}/info`);
+      });
+    } catch (error) {
+      console.error('❌ Failed to start service:', error.message);
+      process.exit(1);
+    }
+  };
+  
+  startServer();
 }
 
 module.exports = app;

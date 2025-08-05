@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const authMiddleware = require('../middleware/auth');
+const { getDatabaseService } = require('../services/database');
 
 const router = express.Router();
 
@@ -20,26 +21,33 @@ const prisma = new PrismaClient({
 // GET /api/service/health - Health check endpoint
 router.get('/health', async (req, res) => {
   try {
-    // Check database connectivity with timeout
-    const dbTimeout = isTest ? 1000 : 5000; // 1 second for tests, 5 seconds for production
+    const databaseService = getDatabaseService();
+    const dbHealth = await databaseService.getHealth();
     
-    await Promise.race([
-      prisma.$queryRaw`SELECT 1`,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database connection timeout')), dbTimeout)
-      )
-    ]);
-    
-    res.json({
-      status: 'UP',
-      service: 'user-service',
-      version: process.env.SERVICE_VERSION || '1.0.0',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      checks: {
-        database: 'connected'
-      }
-    });
+    if (dbHealth.status === 'connected') {
+      res.json({
+        status: 'UP',
+        service: 'user-service',
+        version: process.env.SERVICE_VERSION || '1.0.0',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        checks: {
+          database: 'connected'
+        }
+      });
+    } else {
+      res.status(503).json({
+        status: 'DOWN',
+        service: 'user-service',
+        version: process.env.SERVICE_VERSION || '1.0.0',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        checks: {
+          database: 'disconnected'
+        },
+        error: dbHealth.error
+      });
+    }
   } catch (error) {
     res.status(503).json({
       status: 'DOWN',

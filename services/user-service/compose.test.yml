@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Test database
   postgres-test:
@@ -62,21 +60,3 @@ services:
       retries: 5
       start_period: 60s
 
-  # Run integration tests
-  auth-service-test:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    environment:
-      NODE_ENV: test
-      TEST_INTEGRATION: "true"
-      DATABASE_URL: postgresql://testuser:testpass@postgres-test:5432/peerit_test
-      REDIS_URL: redis://redis-test:6379
-      JWT_SECRET: test-secret-not-for-production
-      JWT_REFRESH_SECRET: test-refresh-secret-not-for-production
-    depends_on:
-      postgres-test:
-        condition: service_healthy
-      redis-test:
-        condition: service_healthy
-    command: npm run test:all
