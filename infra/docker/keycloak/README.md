@@ -335,11 +335,11 @@ Both collections are standalone and can be run independently. The negative test 
 
 | Test Category | Coverage |
 |---------------|----------|
-| Authentication | ✅ Admin, Teacher, Student login |
-| Admin API | ✅ Users, Roles, Clients access |
-| Token Validation | ✅ UserInfo endpoint for all roles |
-| Authorization | ✅ Role-based access control |
-| Negative Tests | ✅ Forbidden access scenarios |
+| Authentication | Admin, Teacher, Student login |
+| Admin API | Users, Roles, Clients access |
+| Token Validation | UserInfo endpoint for all roles |
+| Authorization | Role-based access control |
+| Negative Tests | Forbidden access scenarios |
 
 ## Troubleshooting
 
