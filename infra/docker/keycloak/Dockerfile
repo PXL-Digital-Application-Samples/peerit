@@ -15,16 +15,17 @@ LABEL org.opencontainers.image.source="https://github.com/PXL-Digital-Applicatio
 USER root
 
 # Install additional tools for configuration and health checks
-RUN microdnf update -y && \
-    microdnf install -y curl jq && \
-    microdnf clean all
+# Keycloak latest uses UBI9 which has dnf instead of microdnf
+RUN dnf update -y && \
+    dnf install -y curl jq && \
+    dnf clean all
 
 # Copy realm configuration and themes
-COPY infra/docker/keycloak/realm-config/ /opt/keycloak/data/import/
-COPY infra/docker/keycloak/themes/ /opt/keycloak/themes/
+COPY realm-config/ /opt/keycloak/data/import/
+COPY themes/ /opt/keycloak/themes/
 
 # Copy initialization scripts
-COPY infra/docker/keycloak/scripts/ /opt/keycloak/scripts/
+COPY scripts/ /opt/keycloak/scripts/
 RUN chmod +x /opt/keycloak/scripts/*.sh
 
 # Set ownership and permissions
