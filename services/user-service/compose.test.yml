@@ -27,6 +27,41 @@ services:
       timeout: 3s
       retries: 5
 
+  # Keycloak for integration testing
+  keycloak-test:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      # Bootstrap admin configuration
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: Admin123
+      
+      # Database Configuration - using same DB as user-service
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-test:5432/peerit_test
+      KC_DB_USERNAME: testuser
+      KC_DB_PASSWORD: testpass
+      KC_DB_SCHEMA: keycloak
+      
+      # Enable health and metrics
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: "/"
+      
+    ports:
+      - "8180:8080"
+    volumes:
+      - ../../infra/docker/keycloak/realm-config:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    entrypoint: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
+    healthcheck:
+      test: ["CMD", "bash", "-c", ">/dev/tcp/localhost/8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   # Run integration tests
   auth-service-test:
     build:

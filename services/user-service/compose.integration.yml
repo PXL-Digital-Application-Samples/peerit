@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # Single PostgreSQL for both user-service and Keycloak
+  postgres-integration:
+    image: postgres:15-alpine
+    container_name: user-service-postgres-integration
+    environment:
+      POSTGRES_DB: peerit_test
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_integration_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d peerit_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak using the same PostgreSQL
+  keycloak-integration:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: user-service-keycloak-integration
+    environment:
+      # Database Configuration - using same DB as user-service
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-integration:5432/peerit_test
+      KC_DB_USERNAME: testuser
+      KC_DB_PASSWORD: testpass
+      KC_DB_SCHEMA: keycloak
+      
+      # Development Configuration
+      KC_HOSTNAME: localhost
+      KC_HTTP_PORT: 8080
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      
+      # Admin user for testing
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      
+      # Logging
+      KC_LOG_LEVEL: INFO
+      
+    ports:
+      - "8180:8080"
+    depends_on:
+      postgres-integration:
+        condition: service_healthy
+    command: ["start-dev", "--import-realm"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/realms/master"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  postgres_integration_data:
+    driver: local

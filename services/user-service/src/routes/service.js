@@ -1,14 +1,34 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
+// Configure Prisma with shorter timeouts for tests
+const isTest = process.env.NODE_ENV === 'test';
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  },
+  log: isTest ? [] : ['error'],
+  // Note: Prisma doesn't support query timeout in client config
+  // We'll handle timeouts at the query level
+});
 
 // GET /api/service/health - Health check endpoint
 router.get('/health', async (req, res) => {
   try {
-    // Check database connectivity
-    await prisma.$queryRaw`SELECT 1`;
+    // Check database connectivity with timeout
+    const dbTimeout = isTest ? 1000 : 5000; // 1 second for tests, 5 seconds for production
+    
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database connection timeout')), dbTimeout)
+      )
+    ]);
     
     res.json({
       status: 'UP',
@@ -36,10 +56,10 @@ router.get('/health', async (req, res) => {
 });
 
 // GET /api/service/metrics - Service metrics endpoint
-router.get('/metrics', async (req, res, next) => {
+router.get('/metrics', authMiddleware.authenticate, async (req, res, next) => {
   try {
     // Check permissions - only admins can view metrics
-    if (!req.user.roles.includes('admin')) {
+    if (!req.user.roles || !req.user.roles.includes('admin')) {
       return res.status(403).json({
         error: 'Forbidden',
         message: 'Only admins can view service metrics',

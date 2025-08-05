@@ -8,9 +8,9 @@ services:
     environment:
       # Database Configuration
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: keycloak
+      KC_DB_URL: jdbc:postgresql://host.docker.internal:5433/peerit_test
+      KC_DB_USERNAME: testuser
+      KC_DB_PASSWORD: testpass
       
       # Development Configuration
       KC_HOSTNAME: localhost
@@ -32,9 +32,7 @@ services:
     command: 
       - start-dev
       - --import-realm
-    depends_on:
-      postgres:
-        condition: service_healthy
+    depends_on: []
     networks:
       - peerit-network
     healthcheck:
@@ -43,25 +41,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-
-  postgres:
-    image: postgres:16-alpine
-    container_name: postgres-keycloak
-    env_file:
-      - ./keycloak/.env.example
-    environment:
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5433:5432"
-    volumes:
-      - keycloak-postgres-data:/var/lib/postgresql/data
-    networks:
-      - peerit-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keycloak"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
   keycloak-postgres-data:

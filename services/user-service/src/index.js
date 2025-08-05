@@ -67,6 +67,13 @@ app.use(actuator());
 // API Documentation
 try {
   const swaggerDocument = YAML.load(path.join(__dirname, '../openapi.yaml'));
+  
+  // Serve the raw OpenAPI spec before swagger-ui middleware
+  app.get('/docs/openapi.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json(swaggerDocument);
+  });
+  
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 } catch (error) {
   console.warn('Could not load OpenAPI documentation:', error.message);
