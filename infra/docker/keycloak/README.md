@@ -270,24 +270,104 @@ curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/admin/realms/peerit/users
 ```
 
+## Testing
+
+### Automated Test Suite
+
+The Keycloak configuration includes comprehensive automated tests to verify:
+
+- Authentication and token generation
+- Admin API access and permissions
+- User role-based authorization
+- Negative authorization (forbidden access)
+
+### Running Tests
+
+**Prerequisites:**
+
+```bash
+# Install Newman (Postman CLI runner)
+npm install -g newman
+
+# Ensure Keycloak is running
+docker compose -f infra/docker/compose.yml up -d
+```
+
+**Main Test Suite:**
+
+```bash
+# Run all positive tests (authentication, admin API, token validation)
+npx newman run infra/docker/keycloak/test/peerit-keycloak-tests.json
+
+# Expected: 19 assertions pass
+# - 5 authentication tests (admin, teacher, student logins)
+# - 11 admin API tests (users, roles, clients access)
+# - 3 token validation tests (userinfo endpoint)
+```
+
+**Negative Authorization Tests:**
+
+```bash
+# Run authorization tests (teacher/student forbidden from admin endpoints)
+npx newman run infra/docker/keycloak/test/peerit-keycloak-negative-role-tests.json
+
+# Expected: 8 assertions pass
+# - 2 login tests (teacher, student authentication)
+# - 6 forbidden tests (403 responses for admin endpoints)
+```
+
+**Run Both Test Suites:**
+
+```bash
+# Sequential execution of both test collections
+npx newman run infra/docker/keycloak/test/peerit-keycloak-tests.json && \
+npx newman run infra/docker/keycloak/test/peerit-keycloak-negative-role-tests.json
+```
+
+### Test Collections
+
+- **`peerit-keycloak-tests.json`**: Main test suite with positive scenarios
+- **`peerit-keycloak-negative-role-tests.json`**: Negative authorization tests
+
+Both collections are standalone and can be run independently. The negative test collection includes its own login steps to work without dependencies.
+
+### Test Coverage
+
+| Test Category | Coverage |
+|---------------|----------|
+| Authentication | ✅ Admin, Teacher, Student login |
+| Admin API | ✅ Users, Roles, Clients access |
+| Token Validation | ✅ UserInfo endpoint for all roles |
+| Authorization | ✅ Role-based access control |
+| Negative Tests | ✅ Forbidden access scenarios |
+
 ## Troubleshooting
 
 ### Common Issues
 
-**Keycloak won't start**
+#### Keycloak won't start
+
 - Check PostgreSQL connectivity
 - Verify database credentials
 - Check port conflicts (8080)
 
-**Token validation fails**
+#### Token validation fails
+
 - Verify realm name and client configuration
 - Check token expiration settings
 - Validate JWKS endpoint accessibility
 
-**User authentication fails**
+#### User authentication fails
+
 - Check user credentials in Keycloak admin
 - Verify client redirect URIs
 - Check password policies
+
+#### Tests failing
+
+- Ensure Keycloak is fully started and healthy
+- Verify realm import completed successfully
+- Check test user credentials match realm configuration
 
 ### Logs and Debugging
 

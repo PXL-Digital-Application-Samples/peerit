@@ -1,0 +1,255 @@
+{
+  "info": {
+    "name": "Peerit Keycloak Negative Role Tests",
+    "description": "Negative authorization tests: teacher and student tokens must be forbidden from admin endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "realm", "value": "peerit", "type": "string" },
+    { "key": "teacherToken", "value": "", "type": "string" },
+    { "key": "studentToken", "value": "", "type": "string" },
+    { "key": "teacherUsername", "value": "teacher1", "type": "string" },
+    { "key": "teacherPassword", "value": "Teacher123", "type": "string" },
+    { "key": "studentUsername", "value": "student1", "type": "string" },
+    { "key": "studentPassword", "value": "Student123", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Teacher User Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "grant_type", "value": "password" },
+            { "key": "client_id", "value": "admin-cli" },
+            { "key": "scope", "value": "openid" },
+            { "key": "username", "value": "{{teacherUsername}}" },
+            { "key": "password", "value": "{{teacherPassword}}" }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+          "host": ["{{baseUrl}}"],
+          "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Teacher can login to Peerit realm', () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Store teacher token",
+              "const response = pm.response.json();",
+              "pm.collectionVariables.set('teacherToken', response.access_token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student User Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            { "key": "grant_type", "value": "password" },
+            { "key": "client_id", "value": "admin-cli" },
+            { "key": "scope", "value": "openid" },
+            { "key": "username", "value": "{{studentUsername}}" },
+            { "key": "password", "value": "{{studentPassword}}" }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
+          "host": ["{{baseUrl}}"],
+          "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Student can login to Peerit realm', () => {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Store student token",
+              "const response = pm.response.json();",
+              "pm.collectionVariables.set('studentToken', response.access_token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teacher Forbidden: List Peerit Realm Users",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/realms/{{realm}}/users",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "realms", "{{realm}}", "users"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Teacher is forbidden from listing users', () => {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Forbidden: List Peerit Realm Users",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/realms/{{realm}}/users",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "realms", "{{realm}}", "users"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Student is forbidden from listing users', () => {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teacher Forbidden: List Peerit Realm Roles",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/realms/{{realm}}/roles",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "realms", "{{realm}}", "roles"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Teacher is forbidden from listing roles', () => {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Forbidden: List Peerit Realm Roles",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/realms/{{realm}}/roles",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "realms", "{{realm}}", "roles"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Student is forbidden from listing roles', () => {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teacher Forbidden: List Peerit Realm Clients",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/realms/{{realm}}/clients",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "realms", "{{realm}}", "clients"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Teacher is forbidden from listing clients', () => {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Forbidden: List Peerit Realm Clients",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{studentToken}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/realms/{{realm}}/clients",
+          "host": ["{{baseUrl}}"],
+          "path": ["admin", "realms", "{{realm}}", "clients"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Student is forbidden from listing clients', () => {",
+              "    pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
