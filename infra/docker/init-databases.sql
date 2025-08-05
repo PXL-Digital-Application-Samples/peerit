@@ -1,6 +1,10 @@
 -- Initialize separate databases for each service
 -- This ensures complete data isolation while sharing PostgreSQL instance
 
+-- Keycloak Database (for standalone Keycloak setup)
+CREATE DATABASE keycloak;
+GRANT ALL PRIVILEGES ON DATABASE keycloak TO peerit;
+
 -- Auth Service Database
 CREATE DATABASE peerit_auth;
 GRANT ALL PRIVILEGES ON DATABASE peerit_auth TO peerit;
