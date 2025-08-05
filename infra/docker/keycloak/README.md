@@ -23,6 +23,8 @@ Keycloak automatically imports the Peerit realm configuration on startup from `.
 - Roles: admin, teacher, student
 - Test users: admin, teacher1, student1-3
 - Client apps: peerit-frontend, peerit-api, peerit-services
+- Self-registration: Enabled with email verification
+- Default role: student (assigned to new registrations)
 
 ### Test Users
 
@@ -33,6 +35,38 @@ Keycloak automatically imports the Peerit realm configuration on startup from `.
 | student1 | Student123 | student | student1@peerit.local |
 | student2 | Student123 | student | student2@peerit.local |
 | student3 | Student123 | student | student3@peerit.local |
+
+## User Registration
+
+### Self-Registration
+
+Keycloak is configured to allow users to register themselves:
+
+```bash
+# Registration URL
+http://localhost:8080/realms/peerit/protocol/openid-connect/registrations?client_id=peerit-frontend&response_type=code&scope=openid&redirect_uri=http://localhost:3000
+
+# Or access via login page "Register" link
+http://localhost:8080/realms/peerit/protocol/openid-connect/auth?client_id=peerit-frontend&response_type=code&scope=openid&redirect_uri=http://localhost:3000
+```
+
+### Registration Features
+
+- Email verification required before account activation
+- Username is automatically set to email address
+- New users automatically assigned "student" role
+- Password requirements: 8+ characters with complexity rules
+- Duplicate emails not allowed
+- Password reset available via email
+
+### Registration Flow
+
+1. User clicks "Register" on login page
+2. Fills out registration form (email, first name, last name, password)
+3. Email verification sent to provided address
+4. User clicks verification link to activate account
+5. Account activated with "student" role assigned
+6. User can immediately log in to access student features
 
 ## Testing
 

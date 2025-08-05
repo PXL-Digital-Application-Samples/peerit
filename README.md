@@ -20,13 +20,16 @@ This is a language-agnostic monorepo containing independent, separately deployab
 ### Core Services
 
 - **services/orchestrator**: Workflow coordination service
-- **services/auth-service**: Authentication and session management
 - **services/user-service**: User and role management
 - **services/team-service**: Team and project mapping
 - **services/rubric-service**: Rubric definitions and versions
 - **services/review-service**: Review submission and state management
 - **services/report-service**: Report generation and storage
 - **services/email-service**: Email notifications and reminders
+
+### Identity Provider
+
+- **infra/docker/keycloak**: OpenID Connect authentication and authorization
 
 ## Microservice Architecture
 
@@ -39,7 +42,7 @@ Each microservice is completely independent with its own:
 
 **Key Services:**
 
-- **[auth-service](services/auth-service/README.md)**: JWT tokens, magic links, password management, express-actuator monitoring
+- **[Keycloak](infra/docker/keycloak/README.md)**: OpenID Connect identity provider, user authentication, role-based authorization
 - **user-service**: User profiles, roles, team membership
 - **review-service**: Anonymous peer evaluation submissions
 - **orchestrator**: Cross-service workflow coordination
@@ -48,7 +51,7 @@ For detailed specifications, see individual service README files.
 
 ### Infrastructure
 
-- **infra/docker**: Docker configurations
+- **infra/docker**: Docker configurations and Keycloak identity provider
 
 ## Development
 
@@ -86,7 +89,7 @@ docker compose up
 # Start in background
 docker compose up -d
 
-# Start only infrastructure (PostgreSQL + Redis)
+# Start infrastructure (PostgreSQL + Redis + Keycloak)
 docker compose -f infra/docker/compose.yml up -d
 
 # Start specific services
@@ -113,11 +116,7 @@ Test individual services against real Docker Compose infrastructure:
 docker compose -f infra/docker/compose.yml up -d
 
 # 2. Test specific services
-cd services/auth-service
-npm install
-npm run test:compose  # Tests against real PostgreSQL + Redis
-
-cd ../user-service  
+cd services/user-service  
 npm install
 npm test:integration  # Service-specific integration tests
 
@@ -130,7 +129,7 @@ docker compose -f infra/docker/compose.yml down
 Fast tests for development (no infrastructure required):
 
 ```bash
-cd services/auth-service
+cd services/user-service
 npm run test:basic  # ~2s - uses mocks
 
 cd services/user-service
@@ -141,7 +140,6 @@ npm test  # Unit tests with mocks
 
 | Service | Fast Tests | Integration Tests | Infrastructure |
 |---------|------------|------------------|----------------|
-| auth-service | `npm run test:basic` | `npm run test:compose` | PostgreSQL + Redis |
 | user-service | `npm test` | `npm run test:integration` | PostgreSQL |
 | All | `npm run test:docker` | `npm run test:integration` | Full stack |
 
@@ -151,10 +149,10 @@ Each service can be developed independently:
 
 ```bash
 # Start infrastructure
-docker compose up postgres redis -d
+docker compose up postgres redis keycloak -d
 
-# Work on auth service
-cd services/auth-service
+# Work on user service
+cd services/user-service
 docker compose up
 # OR for local development:
 npm install && npm run dev
@@ -168,7 +166,7 @@ npm install && npm run dev
 
 ### Three-Tier Structure
 
-1. **Infrastructure** (`infra/docker/compose.yml`) - PostgreSQL, Redis, shared services
+1. **Infrastructure** (`infra/docker/compose.yml`) - PostgreSQL, Redis, Keycloak, shared services
 2. **Service Level** (individual `compose.yml`) - Each service with dependencies
 3. **Full Stack** (root `compose.yml`) - Complete development environment
 
