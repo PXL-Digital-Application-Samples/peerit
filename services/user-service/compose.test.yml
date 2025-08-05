@@ -27,7 +27,8 @@ services:
 
   # Keycloak for integration testing
   keycloak-test:
-    image: quay.io/keycloak/keycloak:latest
+    # Use pre-built image or local Keycloak
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:latest}
     environment:
       # Bootstrap admin configuration
       KC_BOOTSTRAP_ADMIN_USERNAME: admin

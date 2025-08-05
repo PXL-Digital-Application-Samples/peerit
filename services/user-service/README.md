@@ -1,6 +1,21 @@
 # User Service
 
-Manages user profiles, roles, and team membership for the Peerit platform. This service handles user data beyond authentication, which is provided by Keycloak.
+Manages user profiles, roles, and tea### Integration Tests (24/24)
+
+```bash
+# Real infrastructure tests with PostgreSQL + Keycloak v26+
+docker compose -f compose.test.yml up -d
+
+# Option 1: Use official Keycloak (default)
+cross-env TEST_INTEGRATION=true npm test -- tests/integration/infrastructure.test.js
+
+# Option 2: Use pre-built Peerit Keycloak image
+export KEYCLOAK_IMAGE=ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
+cross-env TEST_INTEGRATION=true npm test -- tests/integration/infrastructure.test.js
+
+# Cleanup
+docker compose -f compose.test.yml down --volumes
+```ship for the Peerit platform. This service handles user data beyond authentication, which is provided by Keycloak.
 
 ## Quick Start
 

@@ -1,0 +1,123 @@
+name: Build Peerit Keycloak Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      keycloak_version:
+        description: 'Keycloak base image version'
+        required: false
+        default: 'latest'
+        type: string
+      image_tag:
+        description: 'Tag for the built image (e.g., v1.0.0, latest)'
+        required: true
+        default: 'latest'
+        type: string
+      push_to_registry:
+        description: 'Push image to GitHub Container Registry'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: pxl-digital-application-samples/peerit-keycloak
+
+jobs:
+  build-keycloak:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Container Registry
+        if: ${{ inputs.push_to_registry }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ inputs.image_tag }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix={{branch}}-
+            type=ref,event=branch
+            
+      - name: Build Keycloak image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./infra/docker/keycloak/Dockerfile
+          build-args: |
+            KEYCLOAK_VERSION=${{ inputs.keycloak_version }}
+          push: ${{ inputs.push_to_registry }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          
+      - name: Generate image summary
+        run: |
+          echo "## 🔑 Keycloak Image Built Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Image Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base Keycloak Version**: ${{ inputs.keycloak_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: ${{ inputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pushed to Registry**: ${{ inputs.push_to_registry }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Features Included" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Pre-configured Peerit realm" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Custom Peerit themes" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Health checks enabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Metrics enabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Multi-platform support (amd64/arm64)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Usage Example" >> $GITHUB_STEP_SUMMARY
+          echo '```yaml' >> $GITHUB_STEP_SUMMARY
+          echo 'services:' >> $GITHUB_STEP_SUMMARY
+          echo '  keycloak:' >> $GITHUB_STEP_SUMMARY
+          echo '    image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}' >> $GITHUB_STEP_SUMMARY
+          echo '    environment:' >> $GITHUB_STEP_SUMMARY
+          echo '      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak' >> $GITHUB_STEP_SUMMARY
+          echo '      KC_DB_USERNAME: keycloak' >> $GITHUB_STEP_SUMMARY
+          echo '      KC_DB_PASSWORD: password' >> $GITHUB_STEP_SUMMARY
+          echo '      KC_BOOTSTRAP_ADMIN_USERNAME: admin' >> $GITHUB_STEP_SUMMARY
+          echo '      KC_BOOTSTRAP_ADMIN_PASSWORD: admin123' >> $GITHUB_STEP_SUMMARY
+          echo '    ports:' >> $GITHUB_STEP_SUMMARY
+          echo '      - "8080:8080"' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+      - name: Test image (if not pushed)
+        if: ${{ !inputs.push_to_registry }}
+        run: |
+          echo "Testing built image locally..."
+          docker run --rm -d \
+            --name test-keycloak \
+            -p 8080:8080 \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD=testpass123 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}
+          
+          # Wait for startup
+          sleep 30
+          
+          # Test health endpoint
+          curl -f http://localhost:8080/health/ready
+          
+          # Stop test container
+          docker stop test-keycloak
