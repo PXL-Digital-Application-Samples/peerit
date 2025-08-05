@@ -1,31 +1,53 @@
 // Keycloak Infrastructure Tests
 // Declarative testing for Keycloak deployment
 
+const KEYCLOAK_URL = process.env.KEYCLOAK_URL || 'http://localhost:8080';
+const TEST_TIMEOUT = parseInt(process.env.TEST_TIMEOUT) || 30000;
+
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const waitForKeycloak = async () => {
+  const maxAttempts = 20;
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    try {
+      const response = await fetch(`${KEYCLOAK_URL}/health/ready`);
+      if (response.ok) return true;
+    } catch (error) {
+      // Continue trying
+    }
+    await delay(3000);
+    attempts++;
+  }
+  throw new Error('Keycloak did not become ready in time');
+};
+
 describe('Keycloak Infrastructure', () => {
   beforeAll(async () => {
     await waitForKeycloak();
-  }, global.TEST_TIMEOUT);
+  }, TEST_TIMEOUT);
 
   describe('Health Checks', () => {
     test('health endpoint should be accessible', async () => {
-      const response = await fetch(`${global.KEYCLOAK_URL}/health`);
+      const response = await fetch(`${KEYCLOAK_URL}/health`);
       expect(response.status).toBe(200);
     });
 
     test('ready endpoint should confirm readiness', async () => {
-      const response = await fetch(`${global.KEYCLOAK_URL}/health/ready`);
+      const response = await fetch(`${KEYCLOAK_URL}/health/ready`);
       expect(response.status).toBe(200);
     });
 
     test('metrics endpoint should be accessible', async () => {
-      const response = await fetch(`${global.KEYCLOAK_URL}/metrics`);
+      const response = await fetch(`${KEYCLOAK_URL}/metrics`);
       expect(response.status).toBe(200);
     });
   });
 
   describe('Admin Console', () => {
     test('admin console should be accessible', async () => {
-      const response = await fetch(`${global.KEYCLOAK_URL}/admin/`);
+      const response = await fetch(`${KEYCLOAK_URL}/admin/`);
       expect(response.status).toBe(302); // Redirect to login
     });
 
