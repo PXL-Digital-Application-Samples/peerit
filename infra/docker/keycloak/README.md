@@ -28,11 +28,11 @@ Keycloak automatically imports the Peerit realm configuration on startup from `.
 
 | Username | Password | Role | Email |
 |----------|----------|------|-------|
-| admin | admin123 | admin | admin@peerit.local |
-| teacher1 | teacher123 | teacher | teacher1@peerit.local |
-| student1 | student123 | student | student1@peerit.local |
-| student2 | student123 | student | student2@peerit.local |
-| student3 | student123 | student | student3@peerit.local |
+| admin | Admin123 | admin | admin@peerit.local |
+| teacher1 | Teacher123 | teacher | teacher1@peerit.local |
+| student1 | Student123 | student | student1@peerit.local |
+| student2 | Student123 | student | student2@peerit.local |
+| student3 | Student123 | student | student3@peerit.local |
 
 ## Testing
 
@@ -76,6 +76,46 @@ npx newman run infra/docker/keycloak/test/peerit-keycloak-negative-role-tests.js
 - Token validation: UserInfo endpoint for all roles
 - Authorization: Role-based access control
 - Negative tests: Forbidden access scenarios
+
+## API Reference
+
+### OpenID Connect Endpoints (Contract)
+
+```bash
+# Token endpoint
+POST http://localhost:8080/realms/peerit/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+grant_type=password&client_id=peerit-api&client_secret=peerit-api-secret-dev-only&username=admin&password=Admin123
+
+# Logout endpoint
+POST http://localhost:8080/realms/peerit/protocol/openid-connect/logout
+Content-Type: application/x-www-form-urlencoded
+client_id=peerit-api&client_secret=peerit-api-secret-dev-only&refresh_token={refresh_token}
+```
+
+### Admin REST API
+
+```bash
+# Get admin token first
+POST http://localhost:8080/realms/master/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+grant_type=password&client_id=admin-cli&username=admin&password=Admin123
+
+# Then use token for admin operations
+GET http://localhost:8080/admin/realms/peerit/users
+Authorization: Bearer {admin_token}
+
+GET http://localhost:8080/admin/realms/peerit/roles  
+Authorization: Bearer {admin_token}
+
+GET http://localhost:8080/admin/realms/peerit/clients
+Authorization: Bearer {admin_token}
+```
+
+### API Documentation
+
+- **Newman Tests**: Use the test collections as practical API examples
+- **Admin Console**: Access API documentation through the Keycloak admin interface
 
 ## Troubleshooting
 
