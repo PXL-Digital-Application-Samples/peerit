@@ -249,11 +249,11 @@ For production deployment:
 
 ## Monitoring & Observability
 
-### Health Endpoints
+### Available Endpoints
 
-- Health Check: `http://localhost:8080/health`
-- Metrics: `http://localhost:8080/metrics` 
-- Ready Check: `http://localhost:8080/health/ready`
+- Admin Console: `http://localhost:8080/admin/`
+- Realm Account Management: `http://localhost:8080/realms/peerit/account`
+- OpenID Configuration: `http://localhost:8080/realms/peerit/.well-known/openid_configuration`
 
 ### Admin API
 
