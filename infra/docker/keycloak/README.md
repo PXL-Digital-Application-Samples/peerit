@@ -2,6 +2,8 @@
 
 Pre-configured Keycloak for the Peerit platform with PostgreSQL support, realm import, and custom themes.
 
+**Updated**: Fixed GitHub Actions authentication for automatic builds.
+
 ## Quick Test (Copy-Paste Ready)
 
 ### Test with Temporary PostgreSQL Database
