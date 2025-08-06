@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserProfile {
+  id            String   @id @default(cuid())
+  keycloakId    String   @unique
+  username      String   @unique
+  email         String   @unique
+  firstName     String   @default("")
+  lastName      String   @default("")
+  emailVerified Boolean  @default(false)
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastSyncAt    DateTime?
+
+  // Relationships
+  roleAssignments  RoleAssignment[]
+  teamMemberships  TeamMembership[]
+
+  @@map("user_profiles")
+}
+
+model RoleAssignment {
+  id           String   @id @default(cuid())
+  userProfileId String
+  role         String
+  assignedBy   String
+  assignedAt   DateTime @default(now())
+  expiresAt    DateTime?
+  isActive     Boolean  @default(true)
+  metadata     Json     @default("{}")
+
+  // Relationships
+  userProfile  UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([userProfileId, role])
+  @@map("role_assignments")
+}
+
+model Team {
+  id          String   @id
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  memberships TeamMembership[]
+
+  @@map("teams")
+}
+
+model TeamMembership {
+  id            String   @id @default(cuid())
+  userProfileId String
+  teamId        String
+  teamRole      String   @default("member") // leader, member
+  joinedAt      DateTime @default(now())
+  isActive      Boolean  @default(true)
+  addedBy       String
+  metadata      Json     @default("{}")
+
+  // Relationships
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userProfileId, teamId])
+  @@map("team_memberships")
+}

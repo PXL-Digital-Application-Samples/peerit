@@ -1,0 +1,817 @@
+openapi: 3.1.0
+info:
+  contact:
+    name: Peerit Team
+    url: https://github.com/PXL-Digital-Application-Samples/peerit
+  description: "User profiles, roles, and team membership management for the Peerit\
+    \ platform"
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Peerit User Service API
+  version: 1.0.0
+servers:
+- description: Development server
+  url: http://localhost:3020
+- description: Production server
+  url: https://api.peerit.dev/users
+security:
+- keycloakOAuth2: []
+tags:
+- description: User profile management and CRUD operations
+  name: User Profiles
+- description: Role assignment and validation endpoints
+  name: Role Management
+- description: User-team relationship management
+  name: Team Membership
+- description: Keycloak user synchronization endpoints
+  name: User Sync
+- description: Internal service endpoints
+  name: Service
+- description: Health checks and metrics
+  name: Monitoring
+paths:
+  /api/users/profile:
+    get:
+      description: Retrieve the authenticated user's profile information
+      operationId: apiUsersProfileGET
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+          description: User profile retrieved successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: User profile not found
+      security:
+      - keycloakOAuth2:
+        - admin
+        - teacher
+        - student
+      summary: Get current user profile
+      tags:
+      - User Profiles
+      x-eov-operation-handler: controllers/UserProfilesController
+    put:
+      description: Update the authenticated user's profile information
+      operationId: apiUsersProfilePUT
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+          description: Profile updated successfully
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+      security:
+      - keycloakOAuth2:
+        - admin
+        - teacher
+        - student
+      summary: Update user profile
+      tags:
+      - User Profiles
+      x-eov-operation-handler: controllers/UserProfilesController
+  /api/users/{userId}/profile:
+    get:
+      description: Retrieve a specific user's profile (admin or team members only)
+      operationId: apiUsersUserIdProfileGET
+      parameters:
+      - explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+          description: User profile retrieved successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: User not found
+      security:
+      - keycloakOAuth2:
+        - admin
+        - teacher
+      summary: Get user profile by ID
+      tags:
+      - User Profiles
+      x-eov-operation-handler: controllers/UserProfilesController
+  /api/users/{userId}/roles:
+    get:
+      description: Retrieve roles assigned to a user
+      operationId: apiUsersUserIdRolesGET
+      parameters:
+      - explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/UserRole"
+                type: array
+          description: User roles retrieved successfully
+      security:
+      - keycloakOAuth2:
+        - admin
+        - teacher
+      summary: Get user roles
+      tags:
+      - Role Management
+      x-eov-operation-handler: controllers/RoleManagementController
+    post:
+      description: Assign a role to a user (admin only)
+      operationId: apiUsersUserIdRolesPOST
+      parameters:
+      - explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleAssignment"
+        required: true
+      responses:
+        "201":
+          description: Role assigned successfully
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+      security:
+      - keycloakOAuth2:
+        - admin
+      summary: Assign role to user
+      tags:
+      - Role Management
+      x-eov-operation-handler: controllers/RoleManagementController
+  /api/users/{userId}/roles/{roleId}:
+    delete:
+      description: Remove a role from a user (admin only)
+      operationId: apiUsersUserIdRolesRoleIdDELETE
+      parameters:
+      - explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: roleId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Role removed successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Role assignment not found
+      security:
+      - keycloakOAuth2:
+        - admin
+      summary: Remove role from user
+      tags:
+      - Role Management
+      x-eov-operation-handler: controllers/RoleManagementController
+  /api/users/{userId}/teams:
+    get:
+      description: Retrieve all teams a user belongs to
+      operationId: apiUsersUserIdTeamsGET
+      parameters:
+      - explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/TeamMembership"
+                type: array
+          description: Team memberships retrieved successfully
+      security:
+      - keycloakOAuth2:
+        - admin
+        - teacher
+        - student
+      summary: Get user's team memberships
+      tags:
+      - Team Membership
+      x-eov-operation-handler: controllers/TeamMembershipController
+  /api/users/{userId}/teams/{teamId}:
+    delete:
+      description: Remove a user from a team
+      operationId: apiUsersUserIdTeamsTeamIdDELETE
+      parameters:
+      - explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: teamId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: User removed from team successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Team membership not found
+      security:
+      - keycloakOAuth2:
+        - admin
+        - teacher
+      summary: Remove user from team
+      tags:
+      - Team Membership
+      x-eov-operation-handler: controllers/TeamMembershipController
+    post:
+      description: Add a user to a team with specified role
+      operationId: apiUsersUserIdTeamsTeamIdPOST
+      parameters:
+      - explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: teamId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMembershipRequest"
+        required: true
+      responses:
+        "201":
+          description: User added to team successfully
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
+        "409":
+          description: User already in team
+      security:
+      - keycloakOAuth2:
+        - admin
+        - teacher
+      summary: Add user to team
+      tags:
+      - Team Membership
+      x-eov-operation-handler: controllers/TeamMembershipController
+  /api/sync/keycloak:
+    post:
+      description: Synchronize user data from Keycloak (admin only)
+      operationId: apiSyncKeycloakPOST
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
+          description: Sync completed successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+      security:
+      - keycloakOAuth2:
+        - admin
+      summary: Sync users from Keycloak
+      tags:
+      - User Sync
+      x-eov-operation-handler: controllers/UserSyncController
+  /api/sync/users/{userId}:
+    post:
+      description: Synchronize specific user data from Keycloak
+      operationId: apiSyncUsersUserIdPOST
+      parameters:
+      - explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          format: uuid
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+          description: User synced successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: User not found in Keycloak
+      security:
+      - keycloakOAuth2:
+        - admin
+      summary: Sync specific user from Keycloak
+      tags:
+      - User Sync
+      x-eov-operation-handler: controllers/UserSyncController
+  /api/users/search:
+    get:
+      description: Search users by various criteria (internal service use)
+      operationId: apiUsersSearchGET
+      parameters:
+      - explode: true
+        in: query
+        name: query
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: role
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: team
+        required: false
+        schema:
+          format: uuid
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSearchResult"
+          description: Users found
+      security:
+      - keycloakOAuth2:
+        - admin
+        - teacher
+      summary: Search users
+      tags:
+      - Service
+      x-eov-operation-handler: controllers/ServiceController
+  /health:
+    get:
+      description: Service health status
+      operationId: healthGET
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+          description: Service is healthy
+      summary: Health check
+      tags:
+      - Monitoring
+      x-eov-operation-handler: controllers/MonitoringController
+  /info:
+    get:
+      description: Service version and build information
+      operationId: infoGET
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceInfo"
+          description: Service information
+      summary: Service information
+      tags:
+      - Monitoring
+      x-eov-operation-handler: controllers/MonitoringController
+components:
+  schemas:
+    UserProfile:
+      example:
+        firstName: firstName
+        lastName: lastName
+        profilePicture: https://openapi-generator.tech
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        keycloakId: keycloakId
+        preferences:
+          key: ""
+        lastActive: 2000-01-23T04:56:07.000+00:00
+        displayName: displayName
+        bio: bio
+        id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        email: email
+        updatedAt: 2000-01-23T04:56:07.000+00:00
+      properties:
+        id:
+          description: User unique identifier
+          format: uuid
+          type: string
+        keycloakId:
+          description: Keycloak user ID
+          type: string
+        email:
+          format: email
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        displayName:
+          type: string
+        bio:
+          maxLength: 500
+          type: string
+        profilePicture:
+          format: uri
+          type: string
+        preferences:
+          additionalProperties: true
+          type: object
+        lastActive:
+          format: date-time
+          type: string
+        createdAt:
+          format: date-time
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+      required:
+      - email
+      - firstName
+      - id
+      - keycloakId
+      - lastName
+    UserProfileUpdate:
+      example:
+        firstName: firstName
+        lastName: lastName
+        profilePicture: https://openapi-generator.tech
+        preferences:
+          key: ""
+        displayName: displayName
+        bio: bio
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        displayName:
+          type: string
+        bio:
+          maxLength: 500
+          type: string
+        profilePicture:
+          format: uri
+          type: string
+        preferences:
+          additionalProperties: true
+          type: object
+    UserRole:
+      example:
+        assignedBy: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        assignedAt: 2000-01-23T04:56:07.000+00:00
+        name: admin
+        description: description
+        id: id
+      properties:
+        id:
+          type: string
+        name:
+          enum:
+          - admin
+          - teacher
+          - student
+          type: string
+        description:
+          type: string
+        assignedAt:
+          format: date-time
+          type: string
+        assignedBy:
+          format: uuid
+          type: string
+      required:
+      - id
+      - name
+    RoleAssignment:
+      example:
+        metadata:
+          key: ""
+        roleName: admin
+      properties:
+        roleName:
+          enum:
+          - admin
+          - teacher
+          - student
+          type: string
+        metadata:
+          additionalProperties: true
+          type: object
+      required:
+      - roleName
+    TeamMembership:
+      example:
+        teamName: teamName
+        joinedAt: 2000-01-23T04:56:07.000+00:00
+        teamId: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+        teamRole: leader
+        isActive: true
+      properties:
+        teamId:
+          format: uuid
+          type: string
+        teamName:
+          type: string
+        teamRole:
+          enum:
+          - leader
+          - member
+          type: string
+        joinedAt:
+          format: date-time
+          type: string
+        isActive:
+          type: boolean
+      required:
+      - teamId
+      - teamName
+      - teamRole
+    TeamMembershipRequest:
+      example:
+        metadata:
+          key: ""
+        teamRole: member
+      properties:
+        teamRole:
+          default: member
+          enum:
+          - leader
+          - member
+          type: string
+        metadata:
+          additionalProperties: true
+          type: object
+    UserSearchResult:
+      example:
+        total: 0
+        offset: 1
+        limit: 6
+        users:
+        - firstName: firstName
+          lastName: lastName
+          profilePicture: https://openapi-generator.tech
+          createdAt: 2000-01-23T04:56:07.000+00:00
+          keycloakId: keycloakId
+          preferences:
+            key: ""
+          lastActive: 2000-01-23T04:56:07.000+00:00
+          displayName: displayName
+          bio: bio
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          email: email
+          updatedAt: 2000-01-23T04:56:07.000+00:00
+        - firstName: firstName
+          lastName: lastName
+          profilePicture: https://openapi-generator.tech
+          createdAt: 2000-01-23T04:56:07.000+00:00
+          keycloakId: keycloakId
+          preferences:
+            key: ""
+          lastActive: 2000-01-23T04:56:07.000+00:00
+          displayName: displayName
+          bio: bio
+          id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
+          email: email
+          updatedAt: 2000-01-23T04:56:07.000+00:00
+      properties:
+        users:
+          items:
+            $ref: "#/components/schemas/UserProfile"
+          type: array
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+      required:
+      - total
+      - users
+    SyncResult:
+      example:
+        syncedUsers: 0
+        createdUsers: 6
+        startTime: 2000-01-23T04:56:07.000+00:00
+        endTime: 2000-01-23T04:56:07.000+00:00
+        errors:
+        - errors
+        - errors
+        updatedUsers: 1
+      properties:
+        syncedUsers:
+          type: integer
+        createdUsers:
+          type: integer
+        updatedUsers:
+          type: integer
+        errors:
+          items:
+            type: string
+          type: array
+        startTime:
+          format: date-time
+          type: string
+        endTime:
+          format: date-time
+          type: string
+      required:
+      - createdUsers
+      - syncedUsers
+      - updatedUsers
+    HealthStatus:
+      example:
+        version: version
+        status: healthy
+        timestamp: 2000-01-23T04:56:07.000+00:00
+        dependencies:
+          database: connected
+          keycloak: connected
+          redis: connected
+      properties:
+        status:
+          enum:
+          - healthy
+          - unhealthy
+          type: string
+        timestamp:
+          format: date-time
+          type: string
+        version:
+          type: string
+        dependencies:
+          $ref: "#/components/schemas/HealthStatus_dependencies"
+      required:
+      - status
+      - timestamp
+    ServiceInfo:
+      example:
+        buildTime: 2000-01-23T04:56:07.000+00:00
+        name: name
+        commit: commit
+        description: description
+        version: version
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        buildTime:
+          format: date-time
+          type: string
+        commit:
+          type: string
+      required:
+      - name
+      - version
+    Error:
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: integer
+        timestamp:
+          format: date-time
+          type: string
+      required:
+      - error
+      - message
+    HealthStatus_dependencies:
+      example:
+        database: connected
+        keycloak: connected
+        redis: connected
+      properties:
+        database:
+          enum:
+          - connected
+          - disconnected
+          type: string
+        redis:
+          enum:
+          - connected
+          - disconnected
+          type: string
+        keycloak:
+          enum:
+          - connected
+          - disconnected
+          type: string
+  securitySchemes:
+    keycloakOAuth2:
+      description: Keycloak OAuth2 with role-based scopes
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:8080/realms/peerit/protocol/openid-connect/auth
+          scopes:
+            admin: Full administrative access to all platform features
+            teacher: "Teacher role - can manage courses, teams, and view all reviews"
+            student: Student role - can join teams and submit peer reviews
+          tokenUrl: http://localhost:8080/realms/peerit/protocol/openid-connect/token
+        password:
+          scopes:
+            admin: Full administrative access to all platform features
+            teacher: "Teacher role - can manage courses, teams, and view all reviews"
+            student: Student role - can join teams and submit peer reviews
+          tokenUrl: http://localhost:8080/realms/peerit/protocol/openid-connect/token
+      type: oauth2

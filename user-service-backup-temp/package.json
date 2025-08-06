@@ -1,16 +1,16 @@
 {
-  "name": "peerit-auth-service",
+  "name": "peerit-user-service",
   "version": "1.0.0",
   "private": true,
-  "description": "Authentication and session management service for Peerit platform",
+  "description": "User profiles, roles, and team membership management service for Peerit platform",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "npm run test:unit",
-    "test:unit": "cross-env NODE_ENV=test JWT_SECRET=test-secret JWT_REFRESH_SECRET=test-refresh-secret jest tests/unit/ --verbose",
+    "test:unit": "cross-env NODE_ENV=test jest tests/unit/ --verbose",
     "test:basic": "npm run test:unit",
     "test:integration": "cross-env NODE_ENV=test TEST_INTEGRATION=true jest tests/integration/infrastructure.test.js --testTimeout=10000 --forceExit --verbose",
-    "test:watch": "cross-env NODE_ENV=test JWT_SECRET=test-secret JWT_REFRESH_SECRET=test-refresh-secret jest tests/unit/ --watch",
+    "test:watch": "cross-env NODE_ENV=test jest tests/unit/ --watch",
     "test:all": "npm run test:unit && npm run test:integration",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -22,8 +22,7 @@
   },
   "main": "src/index.js",
   "dependencies": {
-    "@prisma/client": "^6.13.0",
-    "bcryptjs": "^2.4.3",
+    "@prisma/client": "^5.22.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
@@ -32,12 +31,14 @@
     "helmet": "^7.2.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "jwks-client": "^2.0.5",
     "morgan": "^1.10.0",
-    "prisma": "^6.13.0",
+    "prisma": "^5.22.0",
     "redis": "^4.7.1",
     "swagger-ui-express": "^5.0.0",
     "uuid": "^9.0.1",
-    "yamljs": "^0.3.0"
+    "yamljs": "^0.3.0",
+    "axios": "^1.11.0"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "^12.0.0",
@@ -56,8 +57,10 @@
     "node": ">=18.0.0"
   },
   "keywords": [
-    "authentication",
-    "jwt",
+    "user-management",
+    "profiles",
+    "roles",
+    "teams",
     "microservice",
     "express",
     "peerit"
