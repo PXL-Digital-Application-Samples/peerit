@@ -6,9 +6,30 @@ class OAuth2SecurityMiddleware {
   constructor() {
     this.keycloakUrl = process.env.KEYCLOAK_URL || 'http://localhost:8080';
     this.realm = process.env.KEYCLOAK_REALM || 'peerit';
-    this.clientId = process.env.KEYCLOAK_CLIENT_ID || 'peerit-api';
+    this.clientId = process.env.KEYCLOAK_CLIENT_ID || 'peerit-services';
     this.jwksCache = new Map();
     this.jwksCacheExpiry = Date.now();
+    this.realmPublicKey = null;
+  }
+
+  async getRealmPublicKey() {
+    try {
+      const response = await axios.get(
+        `${this.keycloakUrl}/realms/${this.realm}`
+      );
+      
+      if (response.data.public_key) {
+        // Convert the public key to PEM format
+        const publicKey = `-----BEGIN PUBLIC KEY-----\n${response.data.public_key}\n-----END PUBLIC KEY-----`;
+        this.realmPublicKey = publicKey;
+        return publicKey;
+      }
+      
+      throw new Error('Public key not found in realm response');
+    } catch (error) {
+      console.error('Failed to fetch realm public key:', error.message);
+      throw error;
+    }
   }
 
   async getJWKS() {
@@ -36,154 +57,7 @@ class OAuth2SecurityMiddleware {
   }
 
   /**
-   * OAuth2 Security middleware for Keycloak JWT validation
-   */
-  keycloakOAuth2(requiredScopes = []) {
-    return async (req, res, next) => {
-      try {
-        const authHeader = req.headers.authorization;
-        
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-          return res.status(401).json({
-            error: 'Unauthorized',
-            message: 'Missing or invalid authorization header',
-            code: 401,
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        const token = authHeader.split(' ')[1];
-        
-        // Decode token without verification first to get header info
-        const decoded = jwt.decode(token, { complete: true });
-        
-        if (!decoded) {
-          return res.status(401).json({
-            error: 'Unauthorized',
-            message: 'Invalid token format',
-            code: 401,
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        // For now, we'll skip full JWT verification and just decode the payload
-        // In production, you'd want to verify against Keycloak's public key
-        const payload = jwt.decode(token);
-        
-        if (!payload) {
-          return res.status(401).json({
-            error: 'Unauthorized',
-            message: 'Invalid token payload',
-            code: 401,
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        // Check token expiration
-        if (payload.exp && Date.now() >= payload.exp * 1000) {
-          return res.status(401).json({
-            error: 'Unauthorized',
-            message: 'Token expired',
-            code: 401,
-            timestamp: new Date().toISOString()
-          });
-        }
-
-        // Extract user roles from Keycloak token
-        const userRoles = payload.realm_access?.roles || [];
-        
-        // Check if user has required scopes/roles
-        if (requiredScopes.length > 0) {
-          const hasRequiredScope = this.checkScopes(userRoles, requiredScopes);
-          
-          if (!hasRequiredScope) {
-            return res.status(403).json({
-              error: 'Forbidden',
-              message: `Insufficient permissions. Required: ${requiredScopes.join(' or ')}`,
-              code: 403,
-              timestamp: new Date().toISOString()
-            });
-          }
-        }
-
-        // Add user info to request for downstream use
-        // Keycloak v26: sub may be missing, fallback to preferred_username, then email
-        let userId = payload.sub || payload.preferred_username || payload.email;
-        req.user = {
-          id: userId,
-          email: payload.email,
-          name: payload.name,
-          preferredUsername: payload.preferred_username,
-          roles: userRoles,
-          scopes: this.rolesToScopes(userRoles),
-          resourceAccess: payload.resource_access || {}
-        };
-
-        next();
-      } catch (error) {
-        console.error('OAuth2 authentication error:', error);
-        return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Token validation failed',
-          code: 401,
-          timestamp: new Date().toISOString()
-        });
-      }
-    };
-  }
-
-  /**
-   * Check if user has any of the required scopes based on their roles
-   */
-  checkScopes(userRoles, requiredScopes) {
-    const userScopes = this.rolesToScopes(userRoles);
-    return requiredScopes.some(scope => userScopes.includes(scope));
-  }
-
-  /**
-   * Convert Keycloak roles to OAuth2 scopes
-   */
-  rolesToScopes(roles) {
-    const scopes = [];
-    
-    if (roles.includes('admin')) {
-      scopes.push('admin');
-    }
-    
-    if (roles.includes('teacher')) {
-      scopes.push('teacher');
-    }
-    
-    if (roles.includes('student')) {
-      scopes.push('student');
-    }
-    
-    return scopes;
-  }
-
-  /**
-   * Convenience method for admin scope requirement
-   */
-  requireAdmin() {
-    return this.keycloakOAuth2(['admin']);
-  }
-
-  /**
-   * Convenience method for teacher scope requirement (includes admin)
-   */
-  requireTeacher() {
-    return this.keycloakOAuth2(['admin', 'teacher']);
-  }
-
-  /**
-   * Convenience method for student scope requirement (includes all roles)
-   */
-  requireStudent() {
-    return this.keycloakOAuth2(['admin', 'teacher', 'student']);
-  }
-
-  /**
-   * OAuth2 Security handler for express-openapi-validator (throws errors instead of using response)
+   * OAuth2 Security handler for express-openapi-validator
    */
   async validateOAuth2(req, requiredScopes = []) {
     try {
@@ -195,71 +69,141 @@ class OAuth2SecurityMiddleware {
 
       const token = authHeader.split(' ')[1];
       
-      // Decode token without verification first to get header info
+      // First, try to decode without verification to check structure
       const decoded = jwt.decode(token, { complete: true });
       
       if (!decoded) {
         throw { status: 401, message: 'Invalid token format' };
       }
 
-      const { kid } = decoded.header;
+      let payload;
       
-      // Get JWKS and find the right key
-      const jwks = await this.getJWKS();
-      
-      // First try to find the key by kid and verify it's for signing
-      let key = jwks.keys.find(k => k.kid === kid && k.use === 'sig');
-      
-      // If not found by exact kid, try to find any signing key with RS256
-      if (!key) {
-        key = jwks.keys.find(k => k.use === 'sig' && k.alg === 'RS256');
-      }
-      
-      if (!key) {
-        console.log('Available keys:', jwks.keys.map(k => ({ kid: k.kid, use: k.use, alg: k.alg })));
-        throw { status: 401, message: `Invalid token key. Expected kid: ${kid}` };
-      }
-      
-      console.log(`Using key: ${key.kid} (use: ${key.use}, alg: ${key.alg})`);
-      
-      if (key.use !== 'sig') {
-        throw { status: 401, message: 'Key is not for signing' };
+      // Try multiple verification strategies for Keycloak v26
+      try {
+        // Strategy 1: Try with JWKS
+        const jwks = await this.getJWKS();
+        const { kid } = decoded.header;
+        
+        // Find the right key - Keycloak v26 uses 'sig' for signature verification
+        let key = jwks.keys.find(k => k.kid === kid && (k.use === 'sig' || !k.use));
+        
+        if (!key && jwks.keys.length > 0) {
+          // Fallback to first available key if no kid match
+          key = jwks.keys.find(k => k.alg === 'RS256' || k.alg === 'RSA256');
+        }
+        
+        if (key) {
+          const publicKey = jwkToPem(key);
+          
+          // Verify with more lenient options for Keycloak v26
+          payload = jwt.verify(token, publicKey, {
+            algorithms: ['RS256'],
+            issuer: [`${this.keycloakUrl}/realms/${this.realm}`],
+            // Don't verify audience since Keycloak v26 doesn't include it by default
+            ignoreExpiration: false
+          });
+        } else {
+          throw new Error('No suitable key found in JWKS');
+        }
+      } catch (jwksError) {
+        console.log('JWKS verification failed, trying realm public key:', jwksError.message);
+        
+        // Strategy 2: Try with realm public key
+        try {
+          const publicKey = await this.getRealmPublicKey();
+          payload = jwt.verify(token, publicKey, {
+            algorithms: ['RS256'],
+            issuer: [`${this.keycloakUrl}/realms/${this.realm}`]
+          });
+        } catch (realmKeyError) {
+          console.log('Realm key verification failed:', realmKeyError.message);
+          
+          // Strategy 3: For development, decode without verification
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('WARNING: Using unverified token in development mode');
+            payload = decoded.payload;
+            
+            // Still check expiration manually
+            if (payload.exp && Date.now() >= payload.exp * 1000) {
+              throw { status: 401, message: 'Token expired' };
+            }
+          } else {
+            throw { status: 401, message: 'Token verification failed' };
+          }
+        }
       }
 
-      // Convert JWK to PEM format
-      const publicKey = jwkToPem(key);
-
-      // Verify the token (Keycloak v26 doesn't include aud field by default)
-      const payload = jwt.verify(token, publicKey, {
-        algorithms: ['RS256'],
-        issuer: `${this.keycloakUrl}/realms/${this.realm}`
-        // Note: audience validation removed since Keycloak v26 tokens don't include aud field
-      });
-
-      // Extract roles from token
-      const realmRoles = payload.realm_access?.roles || [];
-      const clientRoles = payload.resource_access?.[this.clientId]?.roles || [];
-      const userRoles = [...realmRoles, ...clientRoles];
+      // Extract roles from different possible locations in Keycloak v26 token
+      let userRoles = [];
+      
+      // Check realm_access.roles (most common)
+      if (payload.realm_access?.roles) {
+        userRoles = [...userRoles, ...payload.realm_access.roles];
+      }
+      
+      // Check resource_access for client-specific roles
+      if (payload.resource_access) {
+        // Check for the specific client
+        if (payload.resource_access[this.clientId]?.roles) {
+          userRoles = [...userRoles, ...payload.resource_access[this.clientId].roles];
+        }
+        
+        // Also check peerit-frontend and peerit-api clients
+        ['peerit-frontend', 'peerit-api'].forEach(client => {
+          if (payload.resource_access[client]?.roles) {
+            userRoles = [...userRoles, ...payload.resource_access[client].roles];
+          }
+        });
+      }
+      
+      // Remove duplicates
+      userRoles = [...new Set(userRoles)];
+      
+      console.log('Extracted roles:', userRoles);
+      console.log('Required scopes:', requiredScopes);
 
       // Check if user has required scopes
-      const userScopes = this.rolesToScopes(userRoles);
-      const hasRequiredScopes = requiredScopes.length === 0 || 
-        requiredScopes.some(scope => userScopes.includes(scope));
-
-      if (!hasRequiredScopes) {
-        throw { status: 403, message: `Insufficient permissions. Required: ${requiredScopes.join(', ')}, Available: ${userScopes.join(', ')}` };
+      if (requiredScopes.length > 0) {
+        const hasRequiredScope = requiredScopes.some(scope => 
+          userRoles.includes(scope)
+        );
+        
+        if (!hasRequiredScope) {
+          throw { 
+            status: 403, 
+            message: `Insufficient permissions. Required: ${requiredScopes.join(' or ')}, Available: ${userRoles.join(', ')}` 
+          };
+        }
       }
 
       // Attach user information to request
+      // IMPORTANT: Keycloak v26 tokens may not have 'sub' field
+      // Use preferred_username as the primary identifier
+      const userId = payload.preferred_username || payload.email || payload.sub || payload.sid;
+      
+      if (!userId) {
+        console.error('No user identifier found in token:', payload);
+        throw { status: 401, message: 'Invalid token: no user identifier' };
+      }
+      
       req.user = {
-        id: payload.sub,
-        email: payload.email,
-        name: payload.name,
+        id: userId, // This will be the username (e.g., 'admin', 'teacher1')
+        keycloakId: payload.sub || userId, // Fallback to username if no sub
+        username: payload.preferred_username,
+        email: payload.email || payload.preferred_username,
+        name: payload.name || `${payload.given_name || ''} ${payload.family_name || ''}`.trim(),
         preferredUsername: payload.preferred_username,
         roles: userRoles,
-        scopes: this.rolesToScopes(userRoles),
-        resourceAccess: payload.resource_access || {}
+        scopes: userRoles, // Use roles as scopes
+        resourceAccess: payload.resource_access || {},
+        raw: payload // Include raw payload for debugging
       };
+
+      console.log('User authenticated:', {
+        id: req.user.id,
+        email: req.user.email,
+        roles: req.user.roles
+      });
 
       return true;
     } catch (error) {
@@ -271,13 +215,45 @@ class OAuth2SecurityMiddleware {
       }
       
       // Otherwise, wrap it in a 401 error
-      throw { status: 401, message: 'Token validation failed' };
+      throw { status: 401, message: error.message || 'Token validation failed' };
     }
   }
 
   /**
-   * Convenience method for authenticated users (any valid token)
+   * Express middleware for Keycloak JWT validation
    */
+  keycloakOAuth2(requiredScopes = []) {
+    return async (req, res, next) => {
+      try {
+        await this.validateOAuth2(req, requiredScopes);
+        next();
+      } catch (error) {
+        console.error('Authentication failed:', error);
+        return res.status(error.status || 401).json({
+          error: error.status === 403 ? 'Forbidden' : 'Unauthorized',
+          message: error.message,
+          code: error.status || 401,
+          timestamp: new Date().toISOString()
+        });
+      }
+    };
+  }
+
+  /**
+   * Convenience methods for role requirements
+   */
+  requireAdmin() {
+    return this.keycloakOAuth2(['admin']);
+  }
+
+  requireTeacher() {
+    return this.keycloakOAuth2(['admin', 'teacher']);
+  }
+
+  requireStudent() {
+    return this.keycloakOAuth2(['admin', 'teacher', 'student']);
+  }
+
   requireAuth() {
     return this.keycloakOAuth2([]);
   }

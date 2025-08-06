@@ -12,10 +12,26 @@ const apiUsersProfileGET = (params, req) => new Promise(
   async (resolve, reject) => {
     try {
       const db = getDatabaseService().getPrisma();
-      const userEmail = req.user.email; // From OAuth2 middleware
       
-      const userProfile = await db.userProfile.findUnique({
-        where: { email: userEmail },
+      // Get user identifier from token - could be username or email
+      const userIdentifier = req.user.username || req.user.email;
+      const userEmail = req.user.email;
+      
+      console.log('Looking up user profile:', { 
+        identifier: userIdentifier, 
+        email: userEmail,
+        fromToken: req.user 
+      });
+      
+      // Try to find user by username first, then by email
+      let userProfile = await db.userProfile.findFirst({
+        where: {
+          OR: [
+            { username: userIdentifier },
+            { email: userEmail },
+            { keycloakId: userIdentifier } // Fallback to keycloakId
+          ]
+        },
         include: {
           roleAssignments: {
             where: { isActive: true },
@@ -40,11 +56,38 @@ const apiUsersProfileGET = (params, req) => new Promise(
       });
 
       if (!userProfile) {
-        reject(Service.rejectResponse(
-          'User profile not found',
-          404,
-        ));
-        return;
+        // Auto-create profile from Keycloak token data
+        console.log('User profile not found, creating from token data...');
+        
+        userProfile = await db.userProfile.create({
+          data: {
+            keycloakId: req.user.keycloakId || userIdentifier,
+            username: req.user.username || userIdentifier,
+            email: userEmail,
+            firstName: req.user.name?.split(' ')[0] || '',
+            lastName: req.user.name?.split(' ').slice(1).join(' ') || '',
+            emailVerified: true, // Assume verified if they can login
+            enabled: true
+          },
+          include: {
+            roleAssignments: {
+              where: { isActive: true }
+            },
+            teamMemberships: {
+              where: { isActive: true },
+              include: {
+                team: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+        console.log('Created new user profile:', userProfile.id);
       }
 
       resolve(Service.successResponse({
@@ -67,6 +110,7 @@ const apiUsersProfileGET = (params, req) => new Promise(
         }))
       }));
     } catch (e) {
+      console.error('Error in apiUsersProfileGET:', e);
       reject(Service.rejectResponse(
         e.message || 'Database error',
         e.status || 500,
@@ -86,11 +130,17 @@ const apiUsersProfilePUT = ({ userProfileUpdate }, req) => new Promise(
   async (resolve, reject) => {
     try {
       const db = getDatabaseService().getPrisma();
-      const userId = req.user.id; // From OAuth2 middleware
+      const userIdentifier = req.user.username || req.user.email;
       
-      // Check if user profile exists
-      const existingProfile = await db.userProfile.findUnique({
-        where: { keycloakId: userId }
+      // Find existing profile
+      const existingProfile = await db.userProfile.findFirst({
+        where: {
+          OR: [
+            { username: userIdentifier },
+            { email: req.user.email },
+            { keycloakId: userIdentifier }
+          ]
+        }
       });
 
       if (!existingProfile) {
@@ -107,7 +157,7 @@ const apiUsersProfilePUT = ({ userProfileUpdate }, req) => new Promise(
       if (userProfileUpdate.lastName !== undefined) updateData.lastName = userProfileUpdate.lastName;
 
       const updatedProfile = await db.userProfile.update({
-        where: { keycloakId: userId },
+        where: { id: existingProfile.id },
         data: updateData,
         include: {
           roleAssignments: {
@@ -152,6 +202,7 @@ const apiUsersProfilePUT = ({ userProfileUpdate }, req) => new Promise(
         }))
       }));
     } catch (e) {
+      console.error('Error in apiUsersProfilePUT:', e);
       reject(Service.rejectResponse(
         e.message || 'Database error',
         e.status || 500,
@@ -171,11 +222,11 @@ const apiUsersUserIdProfileGET = ({ userId }, req) => new Promise(
   async (resolve, reject) => {
     try {
       const db = getDatabaseService().getPrisma();
-      const currentUserId = req.user.id;
+      const currentUserIdentifier = req.user.username || req.user.email;
       const userRoles = req.user.roles || [];
       
       // Check permissions - users can only access their own profile unless admin/teacher
-      const isOwnProfile = currentUserId === userId;
+      const isOwnProfile = currentUserIdentifier === userId;
       const isAdmin = userRoles.includes('admin');
       const isTeacher = userRoles.includes('teacher');
       
@@ -187,8 +238,16 @@ const apiUsersUserIdProfileGET = ({ userId }, req) => new Promise(
         return;
       }
       
-      const userProfile = await db.userProfile.findUnique({
-        where: { keycloakId: userId },
+      // Find user by various identifiers
+      const userProfile = await db.userProfile.findFirst({
+        where: {
+          OR: [
+            { id: userId },
+            { keycloakId: userId },
+            { username: userId },
+            { email: userId }
+          ]
+        },
         include: {
           roleAssignments: {
             where: { isActive: true },
@@ -240,6 +299,7 @@ const apiUsersUserIdProfileGET = ({ userId }, req) => new Promise(
         }))
       }));
     } catch (e) {
+      console.error('Error in apiUsersUserIdProfileGET:', e);
       reject(Service.rejectResponse(
         e.message || 'Database error',
         e.status || 500,
