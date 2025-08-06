@@ -1,7 +1,76 @@
 
 # OpenAPI Generated JavaScript/Express Server
 
+## Local development
+
+### Integration Tests
+
+Start infrastructure dependencies and loca server.
+
+### Environment Configuration
+
+```.env
+# Database - Test PostgreSQL container
+DATABASE_URL=postgresql://testuser:testpass@host.docker.internal:5434/peerit_test
+
+# Keycloak Configuration - Test Keycloak container
+KEYCLOAK_URL=http://host.docker.internal:8080
+KEYCLOAK_REALM=peerit
+KEYCLOAK_CLIENT_ID=peerit-services
+
+# Application Configuration
+NODE_ENV=development
+PORT=3020
+FRONTEND_URL=http://localhost:3000
+
+# Logging
+LOG_LEVEL=debug
+
+# Redis Configuration - Test Redis container
+REDIS_URL=redis://host.docker.internal:6381
+
+# Test Credentials (for reference)
+# Teacher: teacher1 / Teacher123
+# Student: student1 / Student123
+# Admin: admin / Admin123
+```
+
+### Start Services
+
+```shell
+docker compose -f compose.test.yml up -d
+node ./index.js
+```
+
+### JWT authorization test
+
+Check peerit realm on keycloak:
+
+```shell
+curl -s http://localhost:8080/realms/peerit
+```
+
+Output:
+
+```shell
+{"realm":"peerit","public_key":"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnMMmSilwzOUf8brHrp8IkwEznWyxffihbFauoHReLCj4NmCYVm1o6D0QYS0nyBUxIF7B/petyZ1UcDM4NPqqAIrDy+SS+ZrPcKQ1FLyt+musMP1dKEcFyMi39kXzUbseG9aZcHn92Gh0t/XKqaitZKWgwIZ36koU1BILlG4dhtRGQWpJjBk0N4OGP8iuKijemSxCf9xnPzKNs3z4mxQg0VUCTXEpsLecfD0nypjhHBDfy1T4RVYcGk5Wr6YGlMfR1PVSmbNPO59eWjcqPaGq+y+wZrWpTwTIXdagaH7QzG/9z2wfk2qbJ9fC8xu9Okphz39BoAKF4/OOzgMMPUR9qQIDAQAB","token-service":"http://localhost:8080/realms/peerit/protocol/openid-connect","account-service":"http://localhost:8080/realms/peerit/account","tokens-not-before":0}
+```
+
+Get peerit realm JWT Token from keycloak:
+
+```shell
+curl -s -X POST http://localhost:8080/realms/peerit/protocol/openid-connect/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=password&client_id=peerit-frontend&username=admin&password=Admin123"
+```
+
+Output:
+
+```shell
+{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJ5amozcHJVXzQweEk4c19KcDZhckNBZXlNMUZlSTVQek5DN01VNlN0ZDhrIn0.eyJleHAiOjE3NTQ0ODc4NDgsImlhdCI6MTc1NDQ4Njk0OCwianRpIjoib25ydHJvOjZjOTRlOTg0LWI2MDYtMGQwMS01MGIzLTU4Yzc0ZDg4ZDBhOCIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA4MC9yZWFsbXMvcGVlcml0IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoicGVlcml0LWZyb250ZW5kIiwic2lkIjoiOTVmMjM1YjMtNjUxMi00ZTk1LTg0Y2ItOTM1YWFhODVmN2I0IiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyJodHRwOi8vbG9jYWxob3N0OjMwMDAiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIm9mZmxpbmVfYWNjZXNzIiwiYWRtaW4iLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJBZG1pbiBVc2VyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYWRtaW4iLCJnaXZlbl9uYW1lIjoiQWRtaW4iLCJmYW1pbHlfbmFtZSI6IlVzZXIiLCJlbWFpbCI6ImFkbWluQHBlZXJpdC5sb2NhbCJ9.EBZlv7bwkxQolJHmCXDDVgbUZamAjQ2X0EumW_O_LJDm1GuS6Dky0hDSKm-8nP9hsQGU-iYfbrE44Gmfca8cke5_XbgHOX_hWnxXn8nIZXj1SKdmAgWX_tE827isvb29n9xWFUDJTECkMGbH58hG_b1-knGCWfQs-iEDGZoLgrcH_O7CfLqwkwauTvmbqLCuSzyEz7VFz_2zS-Y4d8clxroaJ1_WonM3aqNAhB17xqbk2CGLAzliF0xPE__5_uO7zi_5u2fNnOtaqqigQMSySOlbygUGFG_5a2zoXL5EmP2hfpTrHB5rA666WedNLIAtFU74PgsOuqmFwBi6KHDL-A","expires_in":899,"refresh_expires_in":1800,"refresh_token":"eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIzNGJiNDA4NC00NTQ1LTRiYWYtYmEzMi1kZmY5NzBlMDVmNjUifQ.eyJleHAiOjE3NTQ0ODg3NDksImlhdCI6MTc1NDQ4Njk0OSwianRpIjoiMjcwOGQyNWQtNjA1MC1hODA5LThhYTAtYThkZGJkNGFjYjFjIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo4MDgwL3JlYWxtcy9wZWVyaXQiLCJhdWQiOiJodHRwOi8vbG9jYWxob3N0OjgwODAvcmVhbG1zL3BlZXJpdCIsInR5cCI6IlJlZnJlc2giLCJhenAiOiJwZWVyaXQtZnJvbnRlbmQiLCJzaWQiOiI5NWYyMzViMy02NTEyLTRlOTUtODRjYi05MzVhYWE4NWY3YjQiLCJzY29wZSI6ImFjciByb2xlcyBlbWFpbCBwcm9maWxlIHdlYi1vcmlnaW5zIn0.EgH8XXewN2T34j5VDOWpE4f_b0sDWPmVC4EADXXaJxumW9-hicA3FrsAqhDKGVfywyGy_LxcIVLHfy5lXvOzpw","token_type":"Bearer","not-before-policy":0,"session_state":"95f235b3-6512-4e95-84cb-935aaa85f7b4","scope":"email profile"}
+```
+
+
 ## Overview
+
 This server was generated using the [OpenAPI Generator](https://openapi-generator.tech) project.  The code generator, and it's generated code allows you to develop your system with an API-First attitude, where the API contract is the anchor and definer of your project, and your code and business-logic aims to complete and comply to the terms in the API contract.
 
 ### prerequisites

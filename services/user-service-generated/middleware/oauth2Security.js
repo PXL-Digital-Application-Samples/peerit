@@ -107,8 +107,10 @@ class OAuth2SecurityMiddleware {
         }
 
         // Add user info to request for downstream use
+        // Keycloak v26: sub may be missing, fallback to preferred_username, then email
+        let userId = payload.sub || payload.preferred_username || payload.email;
         req.user = {
-          id: payload.email, // Use email as the primary identifier
+          id: userId,
           email: payload.email,
           name: payload.name,
           preferredUsername: payload.preferred_username,
