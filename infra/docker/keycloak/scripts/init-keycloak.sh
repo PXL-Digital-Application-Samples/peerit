@@ -9,7 +9,7 @@ echo "Starting Keycloak initialization for Peerit platform..."
 
 # Wait for Keycloak to be ready
 echo "Waiting for Keycloak to be available..."
-until curl -f http://localhost:8080/realms/master > /dev/null 2>&1; do
+until curl -f http://localhost:8080/health/ready > /dev/null 2>&1; do
     echo "Waiting for Keycloak startup..."
     sleep 5
 done
