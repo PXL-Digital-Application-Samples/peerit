@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "prestart": "npm install",
-    "start": "node index.js",
+    "start": "node auto-start.js",
+    "start:manual": "node index.js",
     "dev": "nodemon index.js",
     "test": "mocha --recursive",
     "test:unit": "mocha tests/unit/ --recursive",
