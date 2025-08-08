@@ -13,25 +13,13 @@ Pre-configured Keycloak for the Peerit platform with PostgreSQL support, realm i
 docker network create peerit-test 2>/dev/null || true
 
 # 2. Start PostgreSQL (temporary)
-docker run -d --name postgres-test --network peerit-test \
-  -e POSTGRES_USER=keycloak \
-  -e POSTGRES_PASSWORD=password \
-  -e POSTGRES_DB=keycloak \
-  postgres:15-alpine
+docker run -d --name postgres-test --network peerit-test -e POSTGRES_USER=keycloak -e POSTGRES_PASSWORD=password -e POSTGRES_DB=keycloak postgres:15-alpine
 
 # 3. Start Keycloak (change admin password here)
-docker run -d --name keycloak-test --network peerit-test \
-  -p 8080:8080 \
-  -e KC_DB=postgres \
-  -e KC_DB_URL=jdbc:postgresql://postgres-test:5432/keycloak \
-  -e KC_DB_USERNAME=keycloak \
-  -e KC_DB_PASSWORD=password \
-  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
-  -e KC_BOOTSTRAP_ADMIN_PASSWORD=your-secure-password \
-  ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
+docker run -d --name keycloak-test --network peerit-test -p 8080:8080 -e KC_DB=postgres -e KC_DB_URL=jdbc:postgresql://postgres-test:5432/keycloak -e KC_DB_USERNAME=keycloak -e KC_DB_PASSWORD=password -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=your-secure-password ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
 
 # 4. Wait for startup (30-60 seconds), then test
-sleep 60 && curl -s http://localhost:8080/realms/master | grep -o '"realm":"[^"]*"'
+curl -s http://localhost:8080/realms/master | grep -o '"realm":"[^"]*"'
 
 # 5. Open in browser: http://localhost:8080
 # Login: admin / your-secure-password

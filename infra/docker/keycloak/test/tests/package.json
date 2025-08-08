@@ -1,0 +1,19 @@
+{
+  "name": "keycloak-tests",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest --detectOpenHandles --forceExit",
+    "test:watch": "jest --watch",
+    "test:ci": "jest --ci --coverage --watchAll=false"
+  },
+  "dependencies": {
+    "jest": "^29.7.0",
+    "node-fetch": "^3.3.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "setupFilesAfterEnv": ["<rootDir>/setup.js"]
+  }
+}
