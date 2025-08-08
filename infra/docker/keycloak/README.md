@@ -231,4 +231,3 @@ Creates:
 | `peerit-keycloak-tests.json`               | Postman integration test collection        |
 | `peerit-keycloak-negative-role-tests.json` | Postman negative access test suite         |
 | `.github/workflows/build-keycloak.yml`     | GitHub Actions build pipeline              |
-
