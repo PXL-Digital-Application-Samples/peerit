@@ -8,8 +8,14 @@ Pre-configured Keycloak container for the Peerit platform. Supports PostgreSQL, 
   - [Key Terminology](#key-terminology)
   - [Realm vs Admin User](#realm-vs-admin-user)
   - [Peerit Configuration Summary](#peerit-configuration-summary)
-  - [Token Usage Flow](#token-usage-flow)
-- [Peerit User Accounts Explained](#peerit-user-accounts-explained)
+  - [Token Flow in Peerit (OAuth2 with Keycloak)](#token-flow-in-peerit-oauth2-with-keycloak)
+  - [Client Types in Keycloak](#client-types-in-keycloak)
+  - [OAuth2 Code Flow with PKCE (Simplified)](#oauth2-code-flow-with-pkce-simplified)
+  - [Mermaid Diagram](#mermaid-diagram)
+  - [Accessing Secured Resources](#accessing-secured-resources)
+  - [Frontend Integration Example: `oidc-client-ts`](#frontend-integration-example-oidc-client-ts)
+  - [Refreshing Tokens](#refreshing-tokens)
+- [Peerit Different User Accounts Explained](#peerit-different-user-accounts-explained)
 - [Deployment](#deployment)
   - [Local Dev/Test with Docker Compose](#local-devtest-with-docker-compose)
   - [Local Production Example](#local-production-example)
@@ -69,16 +75,108 @@ It supports industry standards like **OAuth 2.0**, **OpenID Connect**, and **SAM
 - **Internationalization**: Supports `en`, `nl`, and `fr`, default is `en`
 - **Theme**: Custom Peerit theme for login pages and admin console
 
-### Token Usage Flow
+### Token Flow in Peerit (OAuth2 with Keycloak)
+
+Peerit uses the **OAuth2 Authorization Code Flow with PKCE** to securely authenticate users through the `peerit-frontend` public client in Keycloak.
 
 1. A client (e.g., `peerit-frontend`) sends the user to Keycloak for login.
 2. On successful login, Keycloak issues an access token and ID token.
 3. The token contains assigned roles (e.g., `student`) and scopes.
 4. Backend services (e.g., `peerit-api`) validate the token and enforce access.
 
+### Client Types in Keycloak
+
+| Client Type             | Description                                                               | Peerit Usage                      |
+| ----------------------- | ------------------------------------------------------------------------- | --------------------------------- |
+| **Public Client**       | Does not use a client secret. Typically used in browser-based SPAs.       | `peerit-frontend`               |
+| **Confidential Client** | Uses a client secret. Suitable for secure server-to-server communication. | `peerit-api`, `peerit-services` |
+
+### OAuth2 Code Flow with PKCE (Simplified)
+
+1. **Frontend** redirects user to Keycloak login page.
+2. User logs in, and Keycloak **redirects back** to frontend with a temporary `code`.
+3. Frontend exchanges the `code` for **access token**, **refresh token**, and **ID token**.
+4. These tokens are used to authenticate API requests.
+
+### Mermaid Diagram
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Browser (SPA)
+  participant Keycloak
+  participant Peerit API
+
+  User->>Browser (SPA): Opens frontend
+  Browser (SPA)->>Keycloak: Redirect with code_challenge
+  User->>Keycloak: Logs in
+  Keycloak->>Browser (SPA): Redirect with auth code
+  Browser (SPA)->>Keycloak: Token request (code + code_verifier)
+  Keycloak->>Browser (SPA): Returns access_token + id_token + refresh_token
+  Browser (SPA)->>Peerit API: Request with Authorization: Bearer <access_token>
+  Peerit API->>Keycloak: (optional) Validate token
+```
+
+### Accessing Secured Resources
+
+After the frontend receives the tokens:
+
+* It **stores the access token** (in memory or localStorage).
+* Every API call includes:
+
+```http
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5...
+```
+
+Example with `axios`:
+
+```ts
+axios.get('/api/mydata', {
+  headers: {
+    Authorization: `Bearer ${accessToken}`
+  }
+})
+```
+
+### Frontend Integration Example: `oidc-client-ts`
+
+Using [`oidc-client-ts`](https://github.com/authts/oidc-client-ts):
+
+```ts
+import { UserManager } from 'oidc-client-ts'
+
+const userManager = new UserManager({
+  authority: 'http://localhost:8080/realms/peerit',
+  client_id: 'peerit-frontend',
+  redirect_uri: 'http://localhost:3000/callback',
+  response_type: 'code',
+  scope: 'openid profile email roles',
+  post_logout_redirect_uri: 'http://localhost:3000/',
+})
+
+await userManager.signinRedirect()
+```
+
+Then in your callback page:
+
+```ts
+const user = await userManager.signinRedirectCallback()
+console.log(user.access_token)
+```
+
+### Refreshing Tokens
+
+The `refresh_token` allows the frontend to get a new access token without re-authentication.
+
+```ts
+await userManager.signinSilent()
+```
+
+This keeps the session alive while the user remains active.
+
 ---
 
-## Peerit User Accounts Explained
+## Peerit Different User Accounts Explained
 
 | Account Type         | Where Defined          | Purpose                                                                 |
 |----------------------|------------------------|-------------------------------------------------------------------------|
