@@ -1,67 +1,89 @@
 # Peerit Keycloak
 
-Pre-configured Keycloak for the Peerit platform with PostgreSQL support, realm import, and custom themes.
+Pre-configured Keycloak for the Peerit platform with PostgreSQL support, realm import, custom themes, and automated test suite.
 
-**Updated**: Fixed GitHub Actions authentication for automatic builds.
+---
 
-## Quick Test (Copy-Paste Ready)
+## Quick Test (Local Setup)
 
-### Test with Temporary PostgreSQL Database
+### Start with Temporary PostgreSQL Database
 
-```bash
-# 1. Create network
-docker network create peerit-test 2>/dev/null || true
+```sh
+# Create a Docker network (idempotent)
+docker network create peerit-test 2> /dev/null || exit 0
 
-# 2. Start PostgreSQL (temporary)
-docker run -d --name postgres-test --network peerit-test -e POSTGRES_USER=keycloak -e POSTGRES_PASSWORD=password -e POSTGRES_DB=keycloak postgres:15-alpine
+# Start PostgreSQL container
+docker run -d --name postgres-test --network peerit-test `
+  -e POSTGRES_USER=keycloak `
+  -e POSTGRES_PASSWORD=password `
+  -e POSTGRES_DB=keycloak `
+  postgres:15-alpine
 
-# 3. Start Keycloak (change admin password here)
-docker run -d --name keycloak-test --network peerit-test -p 8080:8080 -e KC_DB=postgres -e KC_DB_URL=jdbc:postgresql://postgres-test:5432/keycloak -e KC_DB_USERNAME=keycloak -e KC_DB_PASSWORD=password -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=your-secure-password ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
+# Start Keycloak container (change password)
+docker run -d --name keycloak-test --network peerit-test -p 8080:8080 `
+  -e KC_DB=postgres `
+  -e KC_DB_URL=jdbc:postgresql://postgres-test:5432/keycloak `
+  -e KC_DB_USERNAME=keycloak `
+  -e KC_DB_PASSWORD=password `
+  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin `
+  -e KC_BOOTSTRAP_ADMIN_PASSWORD=your-secure-password `
+  ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
 
-# 4. Wait for startup (30-60 seconds), then test
-curl -s http://localhost:8080/realms/master | grep -o '"realm":"[^"]*"'
+# Wait for Keycloak to start
+Start-Sleep -Seconds 60
 
-# 5. Open in browser: http://localhost:8080
-# Login: admin / your-secure-password
+# Test if realm is available
+curl http://localhost:8080/realms/master
+````
 
-# 6. Cleanup when done
+### Open Keycloak
+
+* URL: [http://localhost:8080](http://localhost:8080)
+* Login: `admin` / `your-secure-password`
+
+### Cleanup
+
+```sh
 docker stop keycloak-test postgres-test
 docker rm keycloak-test postgres-test
 docker network rm peerit-test
 ```
 
-### Test Peerit Realm Users
+---
 
-```bash
-# After Keycloak is running, test pre-configured users:
-# Teacher: teacher1 / Teacher123
-# Student: student1 / Student123
+## Test Realm Users
 
-# Test authentication via API:
-curl -X POST http://localhost:8080/realms/peerit/protocol/openid-connect/token \
-  -H "Content-Type: application/x-www-form-urlencoded" \
+These test users are part of the pre-configured Peerit realm.
+
+```sh
+curl -X POST http://localhost:8080/realms/peerit/protocol/openid-connect/token `
+  -H "Content-Type: application/x-www-form-urlencoded" `
   -d "grant_type=password&client_id=peerit-frontend&username=teacher1&password=Teacher123"
 ```
+
+| Username | Password   | Role    |
+| -------- | ---------- | ------- |
+| admin    | Admin123   | admin   |
+| teacher1 | Teacher123 | teacher |
+| student1 | Student123 | student |
+
+---
 
 ## Production Setup
 
 ### Required Environment Variables
 
-**Database Configuration (Required):**
 ```env
 KC_DB=postgres
 KC_DB_URL=jdbc:postgresql://your-postgres-host:5432/keycloak
 KC_DB_USERNAME=keycloak
 KC_DB_PASSWORD=your-database-password
-```
 
-**Admin Configuration (Required):**
-```env
 KC_BOOTSTRAP_ADMIN_USERNAME=admin
 KC_BOOTSTRAP_ADMIN_PASSWORD=your-secure-admin-password
 ```
 
-### Production Docker Compose
+### Docker Compose Example
 
 ```yaml
 services:
@@ -94,38 +116,37 @@ volumes:
   postgres_data:
 ```
 
-## Building Images
+---
 
-### GitHub Actions (Recommended)
+## Automated Test Suite (Postman + Newman)
 
-**Zero-Click Automatic Build:**
+This repository includes Postman collections for automated testing of Peerit realm setup and role enforcement.
 
-- Just push changes to `infra/docker/keycloak/` on main branch
-- GitHub Actions automatically builds and pushes `latest` tag
-- No forms, no clicking, completely automatic
+### Run Tests
 
-**One-Click Manual Build:**
+```sh
+# Install Newman CLI (if not installed)
+npm install -g newman
 
-1. Go to Actions → "Build Peerit Keycloak Image" → "Run workflow"
-2. Click "Run workflow" (all defaults are pre-filled)
-3. Image available at: `ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest`
+# Start test infrastructure
+docker compose --env-file .env.compose.test -f compose.test.yml up -d
 
-**Automatic Release Build:**
+# Run integration test suite
+newman run peerit-keycloak-tests.json
 
-1. Create and push a version tag: `git tag v1.0.0 && git push origin v1.0.0`
-2. GitHub Actions automatically builds one image with multiple tags:
-   - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1.0.0`
-   - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1.0`
-   - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1`
-   - `ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest` (if main branch)
+# Run negative test suite
+newman run peerit-keycloak-negative-role-tests.json
+```
 
-### Manual Build
+---
 
-```bash
+## Manual Build
+
+```sh
 docker build -f Dockerfile -t peerit-keycloak .
 ```
 
-### Optional Configuration
+Optional environment variables:
 
 ```env
 KC_HOSTNAME=your-domain.com
@@ -135,42 +156,59 @@ KC_DB_SCHEMA=public
 KC_PROXY=edge
 ```
 
-## Features
+---
 
-- **Pre-configured Peerit realm** with roles and clients
-- **Custom themes** for branding  
-- **PostgreSQL database support** (v26+ optimized build)
-- **Optimized production build** with pre-compiled features
-- **Multi-platform** (AMD64/ARM64)
-- **Environment-configurable** for dev/prod
+## GitHub Actions CI
 
-## Pre-configured Users
+### Auto Build
 
-The Peerit realm includes test users:
+* Push to `infra/docker/keycloak/` → triggers auto build to GHCR
 
-- **Admin**: admin / (set via KC_BOOTSTRAP_ADMIN_PASSWORD)
-- **Teacher**: teacher1 / Teacher123
-- **Student**: student1 / Student123
+### Manual Build
+
+1. Go to GitHub → Actions → **"Build Peerit Keycloak Image"**
+2. Run workflow with optional version overrides
+
+### Release Build
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+This builds and tags:
+
+* `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1.0.0`
+* `...:v1.0`, `...:v1`, `...:latest` (if on `main`)
+
+---
 
 ## Troubleshooting
 
-```bash
-# Check if Keycloak is responding
+```sh
+# Check Keycloak realm
 curl http://localhost:8080/realms/master
-
-# Test Peerit realm
 curl http://localhost:8080/realms/peerit
 
-# Check container logs
+# View logs
 docker logs keycloak-test
 
-# Test with debug logging
+# Debug logging
 docker run -e KC_LOG_LEVEL=DEBUG ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
 ```
 
-## Files
+---
 
-- `Dockerfile` - Multi-platform Keycloak image with PostgreSQL support
-- `compose.keycloak-prod.yml` - Production deployment template
-- `.env.prod` - Production environment template
-- `.github/workflows/build-keycloak.yml` - Automated image building
+## File Overview
+
+| File                                       | Purpose                                  |
+| ------------------------------------------ | ---------------------------------------- |
+| `Dockerfile`                               | Keycloak image with Peerit config        |
+| `compose.keycloak-prod.yml`                | Production deployment template           |
+| `compose.test.yml`                         | Local integration testing infrastructure |
+| `.env.compose.dev` / `.env.compose.test`   | Environment config files                 |
+| `peerit-keycloak-tests.json`               | API test suite (Postman collection)      |
+| `peerit-keycloak-negative-role-tests.json` | Access denial test suite                 |
+| `.github/workflows/build-keycloak.yml`     | CI build and deploy                      |
+
+---
