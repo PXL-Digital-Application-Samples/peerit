@@ -1,44 +1,31 @@
--- Keycloak database initialization script for Peerit platform
--- This script sets up the PostgreSQL database for Keycloak
+-- Initializes the peerit_auth DB
 
--- Create Keycloak database if it doesn't exist
-SELECT 'CREATE DATABASE keycloak'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'keycloak')\gexec
+SELECT 'CREATE DATABASE peerit_auth'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'peerit_auth')\gexec
 
--- Connect to the keycloak database
-\c keycloak;
+\c peerit_auth;
 
--- Create keycloak user if it doesn't exist
 DO
 $do$
 BEGIN
    IF NOT EXISTS (
       SELECT FROM pg_catalog.pg_roles
-      WHERE  rolname = 'keycloak') THEN
+      WHERE rolname = 'peerit_user') THEN
 
-      CREATE ROLE keycloak LOGIN PASSWORD 'keycloak';
+      CREATE ROLE peerit_user LOGIN PASSWORD 'securepass123';
    END IF;
 END
 $do$;
 
--- Grant necessary privileges
-GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
-GRANT ALL ON SCHEMA public TO keycloak;
+GRANT ALL PRIVILEGES ON DATABASE peerit_auth TO peerit_user;
+GRANT ALL ON SCHEMA public TO peerit_user;
 
--- Set default privileges for future objects
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO keycloak;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO keycloak;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO keycloak;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO peerit_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO peerit_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO peerit_user;
 
--- Create extension for UUID generation if needed
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Set timezone
 SET timezone = 'UTC';
 
--- Log the completion
-\echo 'Keycloak database initialization completed successfully'
-\echo 'Database: keycloak'
-\echo 'User: keycloak'
-\echo 'Schema: public'
-\echo 'Timezone: UTC'
+\echo 'Peerit database initialized'
