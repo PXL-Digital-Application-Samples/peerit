@@ -4,6 +4,34 @@ Pre-configured Keycloak container for the Peerit platform. Supports PostgreSQL, 
 
 ---
 
+- [What is Keycloak?](#what-is-keycloak)
+  - [Key Terminology](#key-terminology)
+  - [Realm vs Admin User](#realm-vs-admin-user)
+  - [Peerit Configuration Summary](#peerit-configuration-summary)
+  - [Token Usage Flow](#token-usage-flow)
+- [Peerit User Accounts Explained](#peerit-user-accounts-explained)
+- [Deployment](#deployment)
+  - [Local Dev/Test with Docker Compose](#local-devtest-with-docker-compose)
+  - [Local Production Example](#local-production-example)
+  - [Manual Docker Run (without Compose)](#manual-docker-run-without-compose)
+- [Realm Configuration](#realm-configuration)
+- [Local Build](#local-build)
+- [Testing](#testing)
+  - [Automated Tests (Newman)](#automated-tests-newman)
+  - [Manual Test: Realm + Token](#manual-test-realm--token)
+- [Login Info](#login-info)
+  - [Admin Console](#admin-console)
+  - [Test Users (Peerit realm)](#test-users-peerit-realm)
+- [CI / GitHub Actions](#ci--github-actions)
+  - [Auto Build on Push](#auto-build-on-push)
+  - [Manual Build](#manual-build)
+  - [Release Build](#release-build)
+- [File Overview](#file-overview)
+- [Notes](#notes)
+
+
+---
+
 ## What is Keycloak?
 
 Keycloak is an open-source Identity and Access Management (IAM) solution that provides Single Sign-On (SSO), user federation, identity brokering, and centralized authentication/authorization for applications.
@@ -224,10 +252,6 @@ Creates:
 | `peerit-keycloak-tests.json`               | Postman integration test collection        |
 | `peerit-keycloak-negative-role-tests.json` | Postman negative access test suite         |
 | `.github/workflows/build-keycloak.yml`     | GitHub Actions build pipeline              |
-
----
-
-Certainly — here's the additional section that explains **what Keycloak is**, including **key concepts and terminology** relevant to your setup:
 
 ---
 
