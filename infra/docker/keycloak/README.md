@@ -14,7 +14,6 @@ Pre-configured Keycloak container for the Peerit platform. Supports PostgreSQL, 
   - [Local Dev/Test with Docker Compose](#local-devtest-with-docker-compose)
   - [Local Production Example](#local-production-example)
   - [Manual Docker Run (without Compose)](#manual-docker-run-without-compose)
-- [Realm Configuration](#realm-configuration)
 - [Local Build](#local-build)
 - [Testing](#testing)
   - [Automated Tests (Newman)](#automated-tests-newman)
@@ -132,25 +131,6 @@ docker stop keycloak-test postgres-test
 docker rm keycloak-test postgres-test
 docker network rm peerit-test
 ```
-
----
-
-## Realm Configuration
-
-The `peerit` realm includes:
-
-* **Roles**: `admin`, `teacher`, `student`
-* **Groups**: `Administrators`, `Teachers`, `Students`
-* **Users**:
-  * `admin` / `Admin123` (admin)
-  * `teacher1` / `Teacher123` (teacher)
-  * `student1/2/3` / `Student123` (students)
-* **Clients**:
-  * `peerit-frontend` (Vue SPA, PKCE)
-  * `peerit-api` (backend-for-frontend)
-  * `peerit-services` (bearer-only services)
-
-All defined in [`realm-config/peerit-realm.json`](./realm-config/peerit-realm.json).
 
 ---
 
