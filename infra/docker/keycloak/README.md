@@ -26,7 +26,6 @@ Pre-configured Keycloak container for the Peerit platform. Supports PostgreSQL, 
   - [Manual Build](#manual-build)
   - [Release Build](#release-build)
 - [File Overview](#file-overview)
-- [Notes](#notes)
 
 
 ---
@@ -233,11 +232,3 @@ Creates:
 | `peerit-keycloak-negative-role-tests.json` | Postman negative access test suite         |
 | `.github/workflows/build-keycloak.yml`     | GitHub Actions build pipeline              |
 
----
-
-## Notes
-
-* `KC_BOOTSTRAP_ADMIN_USERNAME` and `KC_BOOTSTRAP_ADMIN_PASSWORD` must be set at runtime (they're not defined in `realm-config`).
-* PostgreSQL credentials in `.env.compose.*` must match the `KC_DB_*` variables in Compose.
-
----
