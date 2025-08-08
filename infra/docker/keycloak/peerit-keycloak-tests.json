@@ -56,7 +56,7 @@
       "name": "Authentication Tests",
       "item": [
         {
-          "name": "Get Admin Token",
+          "name": "Get Admin Token (peerit realm)",
           "request": {
             "method": "POST",
             "header": [
@@ -87,9 +87,9 @@
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/realms/master/protocol/openid-connect/token",
+              "raw": "{{baseUrl}}/realms/{{realm}}/protocol/openid-connect/token",
               "host": ["{{baseUrl}}"],
-              "path": ["realms", "master", "protocol", "openid-connect", "token"]
+              "path": ["realms", "{{realm}}", "protocol", "openid-connect", "token"]
             }
           },
           "event": [

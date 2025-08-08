@@ -33,7 +33,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - peerit-test
+      - peerit-prod
 
 networks:
-  peerit-test:
+  peerit-prod:

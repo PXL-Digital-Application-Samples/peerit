@@ -4,13 +4,27 @@ Pre-configured Keycloak for the Peerit platform with PostgreSQL support, realm i
 
 ---
 
-## Quick Test (Local Setup)
+## Deployment
 
-### Start with Temporary PostgreSQL Database
+### Docker Compose Set-up
+
+Test:
 
 ```sh
-# Create a Docker network (idempotent)
-docker network create peerit-test 2> /dev/null || exit 0
+docker compose --env-file .env.compose.test -f compose.test.yml up -d
+```
+
+Prod:
+
+```sh
+docker compose --env-file .env.compose.prod -f compose.prod.yml up -d
+```
+
+### Docker manual container set-up
+
+```sh
+# Create a Docker network
+docker network create peerit-test
 
 # Start PostgreSQL container
 docker run -d --name postgres-test --network peerit-test `
@@ -30,18 +44,9 @@ docker run -d --name keycloak-test --network peerit-test -p 8080:8080 `
   ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
 
 # Wait for Keycloak to start
-Start-Sleep -Seconds 60
+```
 
-# Test if realm is available
-curl http://localhost:8080/realms/master
-````
-
-### Open Keycloak
-
-* URL: [http://localhost:8080](http://localhost:8080)
-* Login: `admin` / `your-secure-password`
-
-### Cleanup
+Cleanup
 
 ```sh
 docker stop keycloak-test postgres-test
@@ -51,85 +56,23 @@ docker network rm peerit-test
 
 ---
 
-## Test Realm Users
-
-These test users are part of the pre-configured Peerit realm.
+## Local build
 
 ```sh
-curl -X POST http://localhost:8080/realms/peerit/protocol/openid-connect/token `
-  -H "Content-Type: application/x-www-form-urlencoded" `
-  -d "grant_type=password&client_id=peerit-frontend&username=teacher1&password=Teacher123"
-```
-
-| Username | Password   | Role    |
-| -------- | ---------- | ------- |
-| admin    | Admin123   | admin   |
-| teacher1 | Teacher123 | teacher |
-| student1 | Student123 | student |
-
----
-
-## Production Setup
-
-### Required Environment Variables
-
-```env
-KC_DB=postgres
-KC_DB_URL=jdbc:postgresql://your-postgres-host:5432/keycloak
-KC_DB_USERNAME=keycloak
-KC_DB_PASSWORD=your-database-password
-
-KC_BOOTSTRAP_ADMIN_USERNAME=admin
-KC_BOOTSTRAP_ADMIN_PASSWORD=your-secure-admin-password
-```
-
-### Docker Compose Example
-
-```yaml
-services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: your-database-password
-      POSTGRES_DB: keycloak
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  keycloak:
-    image: ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
-    environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: your-database-password
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: your-secure-admin-password
-      KC_HOSTNAME: your-domain.com
-      KC_PROXY: edge
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-
-volumes:
-  postgres_data:
+docker build -f Dockerfile -t peerit-keycloak .
 ```
 
 ---
 
-## Automated Test Suite (Postman + Newman)
+## Testing
+
+### Run Automated Tests (Postman + Newman)
 
 This repository includes Postman collections for automated testing of Peerit realm setup and role enforcement.
-
-### Run Tests
 
 ```sh
 # Install Newman CLI (if not installed)
 npm install -g newman
-
-# Start test infrastructure
-docker compose --env-file .env.compose.test -f compose.test.yml up -d
 
 # Run integration test suite
 newman run peerit-keycloak-tests.json
@@ -138,23 +81,35 @@ newman run peerit-keycloak-tests.json
 newman run peerit-keycloak-negative-role-tests.json
 ```
 
----
+### Manual checks
 
-## Manual Build
+Check if keycloak realm `peerit` is available
 
 ```sh
-docker build -f Dockerfile -t peerit-keycloak .
+curl http://localhost:8080/realms/master
+curl http://localhost:8080/realms/peerit
 ```
 
-Optional environment variables:
+Test users that are part of the pre-configured Peerit realm.
 
-```env
-KC_HOSTNAME=your-domain.com
-KC_HTTP_PORT=8080
-KC_LOG_LEVEL=INFO
-KC_DB_SCHEMA=public
-KC_PROXY=edge
+```sh
+curl -X POST http://localhost:8080/realms/peerit/protocol/openid-connect/token `
+  -H "Content-Type: application/x-www-form-urlencoded" `
+  -d "grant_type=password&client_id=peerit-frontend&username=teacher1&password=Teacher123"
 ```
+
+| Username | Password             | Role    |
+| -------- | -------------------- | ------- |
+| admin    | Admin123             | admin   |
+| teacher1 | Teacher123           | teacher |
+| student1 | Student123           | student |
+| student2 | Student123           | student |
+| student3 | Student123           | student |
+
+### Keycloak Dashboard
+
+* URL: [http://localhost:8080](http://localhost:8080)
+* Login: `admin` / `your-secure-password`
 
 ---
 
@@ -183,30 +138,14 @@ This builds and tags:
 
 ---
 
-## Troubleshooting
-
-```sh
-# Check Keycloak realm
-curl http://localhost:8080/realms/master
-curl http://localhost:8080/realms/peerit
-
-# View logs
-docker logs keycloak-test
-
-# Debug logging
-docker run -e KC_LOG_LEVEL=DEBUG ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
-```
-
----
-
 ## File Overview
 
 | File                                       | Purpose                                  |
 | ------------------------------------------ | ---------------------------------------- |
 | `Dockerfile`                               | Keycloak image with Peerit config        |
-| `compose.keycloak-prod.yml`                | Production deployment template           |
 | `compose.test.yml`                         | Local integration testing infrastructure |
-| `.env.compose.dev` / `.env.compose.test`   | Environment config files                 |
+| `compose.prod.yml`                         | Local integration prod example           |
+| `.env.compose.prod` / `.env.compose.test`  | Environment config files                 |
 | `peerit-keycloak-tests.json`               | API test suite (Postman collection)      |
 | `peerit-keycloak-negative-role-tests.json` | Access denial test suite                 |
 | `.github/workflows/build-keycloak.yml`     | CI build and deploy                      |
