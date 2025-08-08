@@ -111,26 +111,23 @@ jobs:
             --name test-keycloak \
             -p 8080:8080 \
             -e KC_DB=postgres \
-            -e KC_DB_URL=jdbc:postgresql://host.docker.internal:5432/keycloak \
-            -e KC_DB_USERNAME=keycloak \
-            -e KC_DB_PASSWORD=testpass \
+            -e KC_DB_URL=jdbc:postgresql://host.docker.internal:5432/peerit_auth \
+            -e KC_DB_USERNAME=peerit_user \
+            -e KC_DB_PASSWORD=securepass123 \
             -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
-            -e KC_BOOTSTRAP_ADMIN_PASSWORD=testpass123 \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD=Admin123 \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag || 'latest' }}
-          
+
           # Wait for startup
           sleep 60
-          
-          # Test realm endpoint (v26+ doesn't have /health endpoints)
+
           curl -f http://localhost:8080/realms/master
           echo "Keycloak master realm accessible"
-          
-          # Test Peerit realm if it exists
+
           if curl -f http://localhost:8080/realms/peerit 2>/dev/null; then
             echo "Peerit realm accessible"
           else
             echo "Peerit realm not accessible (expected if no database)"
           fi
-          
-          # Stop test container
+
           docker stop test-keycloak
