@@ -1,52 +1,103 @@
 # Peerit Keycloak
 
-Pre-configured Keycloak for the Peerit platform with PostgreSQL support, realm import, custom themes, and automated test suite.
+Pre-configured Keycloak container for the Peerit platform. Supports PostgreSQL, realm import, custom themes, and automated testing.
+
+---
+
+## What is Keycloak?
+
+Keycloak is an open-source Identity and Access Management (IAM) solution that provides Single Sign-On (SSO), user federation, identity brokering, and centralized authentication/authorization for applications.
+
+It supports industry standards like **OAuth 2.0**, **OpenID Connect**, and **SAML 2.0**, and is commonly used to secure web, mobile, and backend applications.
+
+### Key Terminology
+
+| Concept       | Description                                                                 |
+|---------------|-----------------------------------------------------------------------------|
+| **Realm**     | A logical namespace in Keycloak. Each realm is isolated and contains its own users, roles, groups, and clients. |
+| **User**      | An identity account. Can log in and be assigned roles and groups.           |
+| **Group**     | A collection of users with shared role assignments or attributes.           |
+| **Role**      | A permission label assigned to users or groups, used by applications to control access. |
+| **Client**    | An application (e.g., SPA, API, service) that uses Keycloak for authentication. Clients request tokens to access resources. |
+| **Client Scope** | A set of roles and attributes exposed in tokens requested by a client.  |
+
+### Realm vs Admin User
+
+- **Admin User (Bootstrap)**: Used to start Keycloak and configure it via the admin console or REST API (defined by env vars).
+- **Realm Users**: Defined *inside* a realm. These are application users (admin, teacher, student) used by your platform.
+
+### Peerit Configuration Summary
+
+- **Realm**: `peerit`
+  - Contains all roles, users, clients specific to the Peerit platform.
+- **Roles**:
+  - `admin`: full access to Peerit features
+  - `teacher`: manages courses, teams, reviews
+  - `student`: submits reviews and joins teams
+- **Clients**:
+  - `peerit-frontend`: A public client for the web UI (PKCE, OpenID Connect)
+  - `peerit-api`: Confidential client for backend API gateway
+  - `peerit-services`: Bearer-only client used by microservices
+- **Groups**:
+  - Map to roles: `/Administrators`, `/Teachers`, `/Students`
+- **Internationalization**: Supports `en`, `nl`, and `fr`, default is `en`
+- **Theme**: Custom Peerit theme for login pages and admin console
+
+### Token Usage Flow
+
+1. A client (e.g., `peerit-frontend`) sends the user to Keycloak for login.
+2. On successful login, Keycloak issues an access token and ID token.
+3. The token contains assigned roles (e.g., `student`) and scopes.
+4. Backend services (e.g., `peerit-api`) validate the token and enforce access.
+
+---
+
+## Peerit User Accounts Explained
+
+| Account Type         | Where Defined          | Purpose                                                                 |
+|----------------------|------------------------|-------------------------------------------------------------------------|
+| **Bootstrap Admin**  | Environment variable   | Starts Keycloak and allows first-time login to import the realm        |
+| **Realm Admin User** | `peerit-realm.json`    | `admin` user inside the `peerit` realm, for platform administration     |
+| **Test Users**       | `peerit-realm.json`    | Teacher and students for dev/test scenarios                            |
+| **PostgreSQL User**  | `.env.compose.*`       | Credentials to connect Keycloak to PostgreSQL                          |
+
+> Bootstrap admin credentials (e.g., `KC_BOOTSTRAP_ADMIN_PASSWORD`) **must be provided** at container runtime.
 
 ---
 
 ## Deployment
 
-### Docker Compose Set-up
-
-Test:
+### Local Dev/Test with Docker Compose
 
 ```sh
 docker compose --env-file .env.compose.test -f compose.test.yml up -d
 ```
 
-Prod:
+### Local Production Example
 
 ```sh
 docker compose --env-file .env.compose.prod -f compose.prod.yml up -d
 ```
 
-### Docker manual container set-up
+---
+
+### Manual Docker Run (without Compose)
+
+> This is for advanced or custom setups.
 
 ```sh
-# Create a Docker network
 docker network create peerit-test
-
-# Start PostgreSQL container
-docker run -d --name postgres-test --network peerit-test `
-  -e POSTGRES_USER=keycloak `
-  -e POSTGRES_PASSWORD=password `
-  -e POSTGRES_DB=keycloak `
-  postgres:15-alpine
-
-# Start Keycloak container (change password)
-docker run -d --name keycloak-test --network peerit-test -p 8080:8080 `
-  -e KC_DB=postgres `
-  -e KC_DB_URL=jdbc:postgresql://postgres-test:5432/keycloak `
-  -e KC_DB_USERNAME=keycloak `
-  -e KC_DB_PASSWORD=password `
-  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin `
-  -e KC_BOOTSTRAP_ADMIN_PASSWORD=your-secure-password `
-  ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
-
-# Wait for Keycloak to start
 ```
 
-Cleanup
+```sh
+docker run -d --name postgres-test --network peerit-test -e POSTGRES_USER=keycloak -e POSTGRES_PASSWORD=password -e POSTGRES_DB=keycloak postgres:15-alpine
+```
+
+```sh
+docker run -d --name keycloak-test --network peerit-test -p 8080:8080 -e KC_DB=postgres -e KC_DB_URL=jdbc:postgresql://postgres-test:5432/keycloak -e KC_DB_USERNAME=keycloak -e KC_DB_PASSWORD=password -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=Admin123 ghcr.io/pxl-digital-application-samples/peerit-keycloak:latest
+```
+
+To stop and clean up:
 
 ```sh
 docker stop keycloak-test postgres-test
@@ -56,7 +107,28 @@ docker network rm peerit-test
 
 ---
 
-## Local build
+## Realm Configuration
+
+The `peerit` realm includes:
+
+* **Roles**: `admin`, `teacher`, `student`
+* **Groups**: `Administrators`, `Teachers`, `Students`
+* **Users**:
+  * `admin` / `Admin123` (admin)
+  * `teacher1` / `Teacher123` (teacher)
+  * `student1/2/3` / `Student123` (students)
+* **Clients**:
+  * `peerit-frontend` (Vue SPA, PKCE)
+  * `peerit-api` (backend-for-frontend)
+  * `peerit-services` (bearer-only services)
+
+All defined in [`realm-config/peerit-realm.json`](./realm-config/peerit-realm.json).
+
+---
+
+## Local Build
+
+Build the image manually:
 
 ```sh
 docker build -f Dockerfile -t peerit-keycloak .
@@ -66,63 +138,65 @@ docker build -f Dockerfile -t peerit-keycloak .
 
 ## Testing
 
-### Run Automated Tests (Postman + Newman)
+### Automated Tests (Newman)
 
-This repository includes Postman collections for automated testing of Peerit realm setup and role enforcement.
+Install and run [Newman](https://github.com/postmanlabs/newman):
 
 ```sh
-# Install Newman CLI (if not installed)
 npm install -g newman
+```
 
-# Run integration test suite
+```sh
 newman run peerit-keycloak-tests.json
-
-# Run negative test suite
 newman run peerit-keycloak-negative-role-tests.json
 ```
 
-### Manual checks
+### Manual Test: Realm + Token
 
-Check if keycloak realm `peerit` is available
+Check realm availability:
 
 ```sh
-curl http://localhost:8080/realms/master
 curl http://localhost:8080/realms/peerit
 ```
 
-Test users that are part of the pre-configured Peerit realm.
+Obtain a test token:
 
 ```sh
-curl -X POST http://localhost:8080/realms/peerit/protocol/openid-connect/token `
-  -H "Content-Type: application/x-www-form-urlencoded" `
-  -d "grant_type=password&client_id=peerit-frontend&username=teacher1&password=Teacher123"
+curl -X POST http://localhost:8080/realms/peerit/protocol/openid-connect/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=password&client_id=peerit-frontend&username=teacher1&password=Teacher123"
 ```
-
-| Username | Password             | Role    |
-| -------- | -------------------- | ------- |
-| admin    | Admin123             | admin   |
-| teacher1 | Teacher123           | teacher |
-| student1 | Student123           | student |
-| student2 | Student123           | student |
-| student3 | Student123           | student |
-
-### Keycloak Dashboard
-
-* URL: [http://localhost:8080](http://localhost:8080)
-* Login: `admin` / `your-secure-password`
 
 ---
 
-## GitHub Actions CI
+## Login Info
 
-### Auto Build
+### Admin Console
 
-* Push to `infra/docker/keycloak/` → triggers auto build to GHCR
+* [http://localhost:8080](http://localhost:8080)
+* Bootstrap Admin: `admin` / `Admin123`
+* Realm Admin (Peerit): `admin` / `Admin123`
+
+### Test Users (Peerit realm)
+
+| Username | Password   | Role    |
+| -------- | ---------- | ------- |
+| admin    | Admin123   | admin   |
+| teacher1 | Teacher123 | teacher |
+| student1 | Student123 | student |
+| student2 | Student123 | student |
+| student3 | Student123 | student |
+
+---
+
+## CI / GitHub Actions
+
+### Auto Build on Push
+
+* Push to `infra/docker/keycloak/` triggers auto build to GHCR.
 
 ### Manual Build
 
-1. Go to GitHub → Actions → **"Build Peerit Keycloak Image"**
-2. Run workflow with optional version overrides
+* Go to GitHub → Actions → **"Build Peerit Keycloak Image"**
+* Trigger manually with version overrides.
 
 ### Release Build
 
@@ -131,23 +205,35 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-This builds and tags:
+Creates:
 
 * `ghcr.io/pxl-digital-application-samples/peerit-keycloak:v1.0.0`
-* `...:v1.0`, `...:v1`, `...:latest` (if on `main`)
+* Plus: `:v1.0`, `:v1`, `:latest` (if on `main`)
 
 ---
 
 ## File Overview
 
-| File                                       | Purpose                                  |
-| ------------------------------------------ | ---------------------------------------- |
-| `Dockerfile`                               | Keycloak image with Peerit config        |
-| `compose.test.yml`                         | Local integration testing infrastructure |
-| `compose.prod.yml`                         | Local integration prod example           |
-| `.env.compose.prod` / `.env.compose.test`  | Environment config files                 |
-| `peerit-keycloak-tests.json`               | API test suite (Postman collection)      |
-| `peerit-keycloak-negative-role-tests.json` | Access denial test suite                 |
-| `.github/workflows/build-keycloak.yml`     | CI build and deploy                      |
+| File                                       | Description                                |
+| ------------------------------------------ | ------------------------------------------ |
+| `Dockerfile`                               | Keycloak image with prebuilt Peerit config |
+| `compose.test.yml` / `compose.prod.yml`    | Local test/prod setup using Docker Compose |
+| `.env.compose.test` / `.env.compose.prod`  | Environment files for Compose              |
+| `realm-config/peerit-realm.json`           | Peerit realm configuration                 |
+| `scripts/init-keycloak.sh`                 | Startup and realm import logic             |
+| `peerit-keycloak-tests.json`               | Postman integration test collection        |
+| `peerit-keycloak-negative-role-tests.json` | Postman negative access test suite         |
+| `.github/workflows/build-keycloak.yml`     | GitHub Actions build pipeline              |
+
+---
+
+Certainly — here's the additional section that explains **what Keycloak is**, including **key concepts and terminology** relevant to your setup:
+
+---
+
+## Notes
+
+* `KC_BOOTSTRAP_ADMIN_USERNAME` and `KC_BOOTSTRAP_ADMIN_PASSWORD` must be set at runtime (they're not defined in `realm-config`).
+* PostgreSQL credentials in `.env.compose.*` must match the `KC_DB_*` variables in Compose.
 
 ---
