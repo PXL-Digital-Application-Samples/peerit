@@ -10,7 +10,7 @@ Pre-configured Keycloak for the Peerit platform with PostgreSQL support, realm i
 
 ```sh
 # Create a Docker network (idempotent)
-docker network create peerit-test 2> /dev/null || exit 0
+docker network create peerit-test
 
 # Start PostgreSQL container
 docker run -d --name postgres-test --network peerit-test `
